@@ -165,7 +165,7 @@ def create_imjeta_doc():
     add_p(
         "Sin embargo, la exposición de estos servicios mediante APIs REST introduce vectores de ataque cuando las consultas se construyen "
         "mediante concatenación de cadenas dentro de funciones espaciales. Si bien la inyección SQL clásica ha sido ampliamente documentada "
-        "(Clarke, 2012; Halfond et al., 2006), la manipulación de operadores geométricos de PostGIS —como ST_DWithin, ST_Intersects o "
+        "(Clarke, 2012; Halfond et al., 2006; OWASP Foundation, 2021), la manipulación de operadores geométricos de PostGIS —como ST_DWithin, ST_Intersects o "
         "ST_Buffer— presenta particularidades poco atendidas: una entrada no saneada no solo permite eludir filtros relacionales o exfiltrar "
         "datos, sino también desencadenar estados de denegación de servicio mediante cálculos topológicos de alta complejidad algorítmica.",
         indent=True
@@ -208,7 +208,8 @@ def create_imjeta_doc():
     add_p(
         "El modelado técnico de los sistemas de información catastral se rige a nivel internacional por el estándar ISO 19152:2012, "
         "conocido como Land Administration Domain Model (LADM). Autores de referencia como Lemmen et al. (2015) y van Oosterom et al. (2006) "
-        "formalizaron las clases fundamentales del catastro, destacando LA_SpatialUnit (parcelas y lotes) y LA_Party (titulares prediales). "
+        "formalizaron las clases fundamentales del catastro, destacando LA_SpatialUnit (parcelas y lotes) y LA_Party (titulares prediales), "
+        "extendidas posteriormente hacia modelos de valoración masiva automatizada (Kara et al., 2021). "
         "Si bien el estándar prescribe la semántica e interoperabilidad de la información territorial y registral, no define salvaguardas "
         "arquitectónicas a nivel de consulta contra ataques de inyección, dejando expuesta la integridad de los derechos reales de propiedad y la "
         "recaudación fiscal ante fallas en la implementación de software."
@@ -253,8 +254,9 @@ def create_imjeta_doc():
 
     add_heading_2("3.4. Vectores de Prueba y Métricas de Rendimiento")
     add_p(
-        "Se estructuraron seis vectores de explotación orientados a las tres dimensiones de la tríada CIA (Confidencialidad, Integridad y Disponibilidad, "
-        "resumidos en el Apéndice 1). La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
+        "Se estructuraron seis vectores de explotación basados en las directrices de prueba de inyección de la Web Security Testing Guide (OWASP Foundation, 2023), "
+        "orientados a las tres dimensiones de la tríada CIA (Confidencialidad, Integridad y Disponibilidad, resumidos en el Apéndice 1). "
+        "La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
         "(1 a 100 clientes), registrando métricas de latencia (media, p50, p95, p99) y throughput (req/s)."
     )
 
@@ -449,9 +451,12 @@ def create_imjeta_doc():
         "Crosby, S. A., & Wallach, D. S. (2003). Denial of service via algorithmic complexity attacks. In Proceedings of the 12th USENIX Security Symposium (pp. 29–44). USENIX Association.",
         "Egenhofer, M. J. (1994). Spatial SQL: A query and presentation language. IEEE Transactions on Knowledge and Data Engineering, 6(1), 86–95. https://doi.org/10.1109/69.273029",
         "Halfond, W. G., Viegas, J., & Orso, A. (2006). A classification of SQL-injection attacks and countermeasures. In Proceedings of the IEEE International Symposium on Secure Software Engineering (ISSSE '06). IEEE.",
+        "Kara, A., Çağdaş, V., Isikdag, U., van Oosterom, P., Lemmen, C., & Stubkjær, E. (2021). Towards the LADM Valuation Information Model: A case study in Turkey. Land Use Policy, 109, 105658. https://doi.org/10.1016/j.landusepol.2021.105658",
         "Lemmen, C., van Oosterom, P., & Bennett, R. (2015). The Land Administration Domain Model. Land Use Policy, 49, 535–545. https://doi.org/10.1016/j.landusepol.2015.01.014",
         "National Vulnerability Database. (2023). CVE-2023-25157 Detail: GeoServer SQL Injection Vulnerability. National Institute of Standards and Technology. https://nvd.nist.gov/vuln/detail/CVE-2023-25157",
         "Obe, R. O., & Hsu, L. S. (2021). PostGIS in Action (3rd ed.). Manning Publications.",
+        "OWASP Foundation. (2021). OWASP Top 10:2021 - The Ten Most Critical Web Application Security Risks. Open Web Application Security Project. https://owasp.org/Top10/",
+        "OWASP Foundation. (2023). Web Security Testing Guide (WSTG v4.2). Open Web Application Security Project. https://owasp.org/www-project-web-security-testing-guide/",
         "van Oosterom, P., Lemmen, C., & Ingvarsson, T. (2006). The core cadastral domain model. Computers, Environment and Urban Systems, 30(5), 627–660. https://doi.org/10.1016/j.compenvurbsys.2005.12.002"
     ]
 
