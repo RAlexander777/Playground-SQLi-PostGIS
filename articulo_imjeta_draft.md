@@ -136,16 +136,9 @@ Para caracterizar la resiliencia bajo estrés progresivo, se evaluó una baterí
 
 ## 6. Discusión
 
-Los resultados experimentales aportan evidencia concluyente sobre la naturaleza de las vulnerabilidades espaciales. La Tabla 1 revela que la incorporación de GeoAlchemy2 y la validación previa con Shapely introduce un overhead de latencia media de apenas **2.63 milisegundos por petición** (+15.24%), manteniendo un throughput de 484.36 peticiones por segundo en un único worker.
+Los resultados experimentales confirman que la arquitectura propuesta (GeoAlchemy2 junto a la validación previa en Shapely) introduce un sobrecosto medio de latencia de **2.63 ms por petición (+15.24%)**, conservando una tasa de procesamiento de **484.36 req/s**. Un aspecto relevante para el diseño de software es el comportamiento en el percentil 99 (p99): la latencia de cola disminuyó de 43.75 ms a 38.24 ms, lo que representa una **mejora del 12.59% en la estabilidad del servicio**. Esta optimización se debe a que PostgreSQL reutiliza los planes de ejecución en memoria (*prepared statements*), eliminando el costo recurrente de re-analizar sintácticamente las consultas dinámicas.
 
-Un resultado arquitectónicamente relevante es la estabilidad de la latencia de cola: en el percentil 99 (p99), la API mitigada redujo la latencia respecto a la vulnerable (de 43.75 ms a 38.24 ms, una mejora del 12.59%). Esto se debe a que la compilación de sentencias parametrizadas permite al planificador de PostgreSQL reutilizar planes de ejecución en memoria caché (*prepared statements*), eliminando el costo de re-parseo sintáctico continuo que sufre la versión dinámica.
-
-En el marco de la seguridad de infraestructuras críticas, este trade-off resulta plenamente justificable. La penalización de 2.63 ms previene con éxito:
-* La exfiltración íntegra de la base de datos catastral mediante evasión de límites territoriales (`ST_DWithin`).
-* La reconstrucción no autorizada de credenciales del sistema a través de canales laterales de excepción geométrica (`ST_Intersects`).
-* La caída total del servicio por ataques de denegación de servicio espacial inducidos mediante sobrecarga algorítmica cuadrática en el motor GEOS.
-
-La Figure 4 sintetiza la tasa de mitigación y bloqueo de ataques (%) a través de los seis vectores evaluados, contrastando una arquitectura desprotegida, un WAF tradicional basado en firmas (OWASP ModSecurity Core Rule Set) y el pipeline propuesto. Mientras que el WAF genérico no logra identificar los ataques espaciales (0% a 20% de bloqueo en vectores topológicos como `ST_DWithin` y `ST_Intersects` al carecer de gramática geoespacial), el pipeline de tres barreras logra un bloqueo completo del 100% en todos los vectores evaluados de la tríada CIA.
+Este sobrecosto medio resulta plenamente asumible frente a las garantías de protección obtenidas: neutraliza la exfiltración masiva de predios, los canales laterales de error y la denegación de servicio espacial. Como se ilustra en la **Figura 4**, los cortafuegos de aplicaciones web tradicionales (WAF basados en firmas como OWASP CRS) carecen de gramática geoespacial y bloquean únicamente entre el 0% y el 20% de las inyecciones topológicas (`ST_DWithin` y `ST_Intersects`). En contraste, el pipeline de tres barreras implementado en la capa de aplicación alcanzó una **tasa de mitigación del 100%** en todos los vectores evaluados de la tríada CIA.
 
 ![Figure 4: Tasa de mitigación y bloqueo de ataques (%) entre arquitectura desprotegida, WAF tradicional (OWASP CRS) y pipeline propuesto](figures/fig4_attack_mitigation_matrix.png)  
 *Figure 4. Tasa de mitigación y bloqueo de ataques (%) entre arquitectura desprotegida, WAF tradicional (OWASP CRS) y pipeline propuesto*
