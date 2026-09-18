@@ -205,7 +205,7 @@ def run_spatial_dos_benchmarks():
     ax.plot(total_vertices_computed, times_unmitigated, 'o-', color='#C0392B', linewidth=2.2, markersize=7, label='Unmitigated Attack (O(N²) Algorithmic Complexity Explosion)')
     ax.plot(total_vertices_computed, times_mitigated, 's--', color='#27AE60', linewidth=2.0, markersize=7, label='Mitigated Architecture (O(1) Bounded via Pydantic & GeoAlchemy2)')
 
-    ax.set_title('Figure 3: PostGIS / GEOS Execution Latency vs. Geometric Pairwise Complexity', fontsize=11, fontweight='bold', pad=12)
+    ax.set_title('PostGIS / GEOS Execution Latency vs. Geometric Pairwise Complexity', fontsize=11, fontweight='bold', pad=12)
     ax.set_xlabel('Geometric Vertices Evaluated in Cross-Join (400 Polygon Pairs × Vertices)', fontsize=10)
     ax.set_ylabel('Execution Latency (ms)', fontsize=10)
     ax.grid(True)
@@ -277,7 +277,7 @@ def generate_defense_pipeline_diagram():
         arrowprops=dict(arrowstyle="-|>", color="#566573", lw=2, mutation_scale=15)
     )
 
-    ax.set_title("Figure 1: Multi-Barrier Defense-in-Depth Pipeline for PostGIS Cadastral Services", fontsize=11, fontweight='bold', y=0.92)
+    ax.set_title("Multi-Barrier Defense-in-Depth Pipeline for PostGIS Cadastral Services", fontsize=11, fontweight='bold', y=0.92)
     plt.tight_layout()
     fig_path = os.path.join(OUTPUT_DIR, "fig1_defense_pipeline.png")
     plt.savefig(fig_path)
@@ -308,7 +308,7 @@ def generate_waf_vs_defense_matrix():
     rects2 = ax.bar(x, traditional_waf, width, label='Traditional Signature WAF (OWASP CRS)', color='#F39C12', alpha=0.9)
     rects3 = ax.bar(x + width, proposed_defense, width, label='Proposed 3-Barrier Defense Pipeline', color='#27AE60', alpha=0.9)
 
-    ax.set_title('Figure 4: Security Effectiveness Comparison across the Six Spatial SQLi Vectors', fontsize=11, fontweight='bold', pad=12)
+    ax.set_title('Security Effectiveness Comparison across the Six Spatial SQLi Vectors', fontsize=11, fontweight='bold', pad=12)
     ax.set_ylabel('Attack Mitigation / Blocking Rate (%)', fontsize=10)
     ax.set_xticks(x)
     ax.set_xticklabels(vectors, fontsize=8.5)
