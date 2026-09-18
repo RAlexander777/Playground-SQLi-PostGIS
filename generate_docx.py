@@ -460,7 +460,7 @@ def create_imjeta_doc():
         "van Oosterom, P., Lemmen, C., & Ingvarsson, T. (2006). The core cadastral domain model. Computers, Environment and Urban Systems, 30(5), 627–660. https://doi.org/10.1016/j.compenvurbsys.2005.12.002"
     ]
 
-    for ref in sorted(references):
+    for ref in sorted(references, key=str.casefold):
         p_ref = doc.add_paragraph()
         p_ref.paragraph_format.left_indent = Inches(0.5)
         p_ref.paragraph_format.first_line_indent = Inches(-0.5)
