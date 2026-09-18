@@ -1,0 +1,10 @@
+MENCIOANR QUE EL SOFTWARE POSTGIS QUIENES LO USAN, COMO PARA DECIR DE QUE TALES INSTITUCIONES TIENE POTENCIALES PROBLEMAS AL USAR POSTGIS.
+
+https://renati.sunedu.gob.pe/
+https://alicia.concytec.gob.pe/
+https://www.sciencedirect.com/
+https://sci-hub.box/
+https://www.tandfonline.com/
+
+LAS MEJORES INVESTIGACIONES ESTAN EN ACM DIGITAL LIBRARY:
+https://dl.acm.org/

