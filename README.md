@@ -152,9 +152,6 @@ Generated publication figures are saved directly to `figures/`:
 │   │       └── index.html
 │   ├── docker-compose.yml
 │   └── Dockerfile
-├── articulo_imjeta_draft.md          # Scientific paper draft (Spanish)
-├── articulo_imjeta_draft_en.md       # Scientific paper draft (English)
-├── generate_docx.py                  # Paper compiler for IMJETA Word template
 ├── run_doctoral_experiments.py       # Full doctoral benchmark runner
 ├── LICENSE                           # MIT License
 └── README.md                         # Repository documentation

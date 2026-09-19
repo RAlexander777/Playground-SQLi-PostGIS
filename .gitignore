@@ -23,3 +23,25 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Personal Academic Documents & Presentations
+*.docx
+*.pdf
+*.pptx
+Imagen1.png
+*.txt
+!lab/requirements.txt
+
+# Local Drafts & Defense Support Sheets
+hoja_apoyo_*.md
+guia_defensa_*.md
+articulo_imjeta_*.md
+Template_IMJETA_*
+antecedentes_*.md
+discusion_*.md
+manual_*.md
+
+# Local Document & Presentation Generator Scripts
+generate_docx*.py
+generate_en_pptx.py
+slides.py
