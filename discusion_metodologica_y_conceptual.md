@@ -23,7 +23,7 @@ En ciencias de la computación, seguridad de software y sistemas de información
 
 1. **Dimensión Geoespacial (Datos Catastrales):**
    * **Población Diana (Universo):** Las **23,960 unidades prediales urbanas** registradas en la cartografía catastral de la ciudad de Puno, Perú.
-   * **Muestra:** **1,500 parcelas poligonales continuas**, modeladas bajo la clase `LA_SpatialUnit` del estándar internacional **ISO 19152:2012 (LADM)** e insertadas en la entidad `tg_lote`.
+   * **Muestra:** **487 parcelas poligonales continuas**, modeladas bajo la clase `LA_SpatialUnit` del estándar internacional **ISO 19152:2012 (LADM)** e insertadas en la entidad `tg_lote`.
    * **Criterios de Inclusión:** Pertenencia a una zona catastral consolidada, proyección oficial en metros UTM Zona 19 Sur (`EPSG:32719`) y variabilidad geométrica (de 4 a 222 vértices por polígono, media de 9.0).
    * **Criterios de Exclusión:** Geometrías degeneradas, multipolígonos desconectados o registros con topología nula.
 
@@ -136,7 +136,7 @@ La investigación es **100% EXPERIMENTAL** (diseño cuasiexperimental de laborat
    * **Variable Independiente (Manipulada):** La arquitectura de acceso a datos espaciales.
      * *Grupo Control (Tratamiento A):* API con SQL dinámico vulnerable.
      * *Grupo Experimental (Tratamiento B):* API con arquitectura de mitigación (GeoAlchemy2 + Shapely + Pydantic).
-   * **Variables Intervinientes (Controladas):** Hardware idéntico (Intel Core Ultra 5 245KF, 32GB RAM DDR5), virtualización idéntica (Docker en WSL2 kernel 6.6), dataset idéntico (1,500 parcelas reales de Puno) y concurrencia fija (10 clientes simultáneos).
+   * **Variables Intervinientes (Controladas):** Hardware idéntico (Intel Core Ultra 5 245KF, 32GB RAM DDR5), virtualización idéntica (Docker en WSL2 kernel 6.6), dataset idéntico (487 parcelas reales de Puno) y concurrencia fija (10 clientes simultáneos).
    * **Variables Dependientes (Medidas Cuantitativamente):**
      * *Eficacia de Seguridad:* Tasa de éxito de explotación (100% en control vs. 0% en experimental).
      * *Throughput:* 556.21 req/s vs. 484.36 req/s (-12.92%).

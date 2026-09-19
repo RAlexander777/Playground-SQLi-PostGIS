@@ -63,9 +63,9 @@ def obtener_estado_catastro(db: Session = Depends(get_db)):
 @router.post("/reset-catastro")
 def reiniciar_catastro():
     """
-    Restaura la base de datos a su estado original (1,500 lotes)
+    Restaura la base de datos a su estado original (487 lotes)
     si un ataque destructivo (DELETE) los eliminó.
     """
     from scripts.seed_data import seed_database
     seed_database()
-    return {"status": "success", "message": "Catastro restaurado a su estado original con 1,500 parcelas y credenciales limpias."}
+    return {"status": "success", "message": "Catastro restaurado a su estado original con 487 parcelas y credenciales limpias."}

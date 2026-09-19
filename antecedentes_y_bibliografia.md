@@ -120,7 +120,7 @@ Los seis vectores evaluados en el laboratorio no surgieron de forma arbitraria; 
 
 5. **Simulación 5: Borrado Destructivo de Cartografía Predial (Data Destruction)**
    * **Taxonomía Teórica:** Inyecciones destructivas incondicionales en sentencias `DELETE`.
-   * **Impacto Catastral:** *van Oosterom et al. (2006)* y *Lemmen et al. (2015)*. Pone en riesgo la clase `LA_SpatialUnit`, purgando físicamente las 1,500 parcelas y dejando el visor geográfico municipal sin cartografía jurídica.
+   * **Impacto Catastral:** *van Oosterom et al. (2006)* y *Lemmen et al. (2015)*. Pone en riesgo la clase `LA_SpatialUnit`, purgando físicamente las 487 parcelas y dejando el visor geográfico municipal sin cartografía jurídica.
 
 6. **Simulación 6: Evasión de Autenticación en el Visor Catastral (Authentication Bypass)**
    * **Taxonomía Teórica:** *Halfond et al. (2006)* (Inyección de comentarios en línea `admin' --`).

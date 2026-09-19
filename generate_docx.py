@@ -80,8 +80,8 @@ def create_imjeta_doc():
         "ejecutadas a través de herramientas de Mapeo Objeto-Relacional (ORM) como SQLAlchemy y GeoAlchemy2. Los resultados "
         "demuestran que el pipeline propuesto neutralizó el 100% de los vectores de ataque con un sobrecosto medio de latencia "
         "de 2.63 ms (+15.24%) y una mejora del 12.59% en la estabilidad de cola (p99). Se concluye que la mitigación efectiva "
-        "de inyecciones espaciales no depende de firewalls perimetrales, sino de trasladar la validación topológica y la parametrización "
-        "rígida a la capa de aplicación (ORM), garantizando la integridad catastral con un impacto operativo marginal."
+        "de inyecciones espaciales no depende de cortafuegos perimetrales genéricos (WAF), sino de trasladar la validación topológica y la parametrización "
+        "tipada a la capa de aplicación (ORM), garantizando la integridad catastral con un impacto operativo marginal."
     )
     r_abs_body = p_abs.add_run(abstract_text)
     set_font(r_abs_body, size=10)
@@ -173,7 +173,7 @@ def create_imjeta_doc():
     add_p(
         "Este artículo presenta una evaluación experimental de vulnerabilidades de inyección SQL espacial en sistemas catastrales sobre "
         "PostGIS. El estudio: (1) documenta y evalúa seis vectores de ataque orientados a la tríada CIA (Confidencialidad, Integridad y Disponibilidad); "
-        "(2) implementa un banco de pruebas reproducible sobre un dataset de 1,500 parcelas urbanas estructuradas bajo el estándar ISO 19152 (LADM); "
+        "(2) implementa un banco de pruebas reproducible sobre un dataset de 487 parcelas urbanas estructuradas bajo el estándar ISO 19152 (LADM); "
         "y (3) cuantifica el impacto en latencia y throughput de una arquitectura de mitigación basada en compilación tipada en ORM (GeoAlchemy2) "
         "y validación previa con Shapely y Pydantic.",
         indent=True
@@ -233,31 +233,42 @@ def create_imjeta_doc():
     add_heading_2("3.1. Enfoque y Diseño Experimental")
     add_p(
         "Se adoptó un diseño experimental y cuantitativo orientado a evaluar la susceptibilidad de endpoints geoespaciales "
-        "ante inyecciones SQL y medir el impacto en rendimiento derivado de un esquema de mitigación multicapa. La evaluación contempla "
-        "dos condiciones: consultas con SQL dinámico desprotegido y consultas compiladas mediante ORM con validación previa de geometrías."
+        "ante inyecciones SQL y medir el impacto en rendimiento derivado de un esquema de mitigación multicapa. La evaluación "
+        "contrasta tres escenarios defensivos: (1) servicio vulnerable sin protección, (2) servicio protegido perimetralmente "
+        "mediante un cortafuegos de aplicaciones web (WAF) basado en firmas (OWASP CRS v3.3), y (3) servicio mitigado mediante el "
+        "pipeline de aplicación propuesto (ORM con validación tipada y topológica previa)."
     )
 
     add_heading_2("3.2. Conjunto de Datos Catastrales (Dataset)")
     add_p(
-        "El dataset experimental comprende 1,500 parcelas catastrales urbanas continuas estructuradas bajo el estándar ISO 19152 "
-        "(LADM, clase LA_SpatialUnit) y georreferenciadas en EPSG:32719. Las geometrías presentan una complejidad de entre 4 y 222 vértices "
-        "(promedio: 9.0 vértices por polígono). Para garantizar reproducibilidad y resguardo ético, la cartografía base se obtuvo de fuentes "
-        "abiertas y los atributos fiscales fueron generados proceduralmente sin incorporar información personal identificable (PII)."
+        "El dataset experimental comprende 487 lotes catastrales urbanos continuos estructurados bajo el estándar ISO 19152 "
+        "(LADM, clase LA_SpatialUnit) y georreferenciados en EPSG:32719. El esquema relacional de pruebas se estructuró en tres "
+        "entidades: tg_lote (persistencia de los 487 lotes prediales bajo la clase LA_SpatialUnit), catastro_titulares "
+        "(información alfanumérica fiscal y de autovalúo bajo la clase LA_Party) y catastro_usuarios (gestión de accesos y credenciales "
+        "operativas). Las geometrías presentan una complejidad de entre 4 y 222 vértices (promedio: 9.0 vértices por polígono). "
+        "Para garantizar reproducibilidad y resguardo ético, la cartografía base se obtuvo de fuentes abiertas y los atributos fiscales "
+        "fueron generados proceduralmente sin incorporar información personal identificable (PII)."
     )
 
     add_heading_2("3.3. Entorno Experimental y Arquitectura")
     add_p(
         "El banco de pruebas se implementó en contenedores Docker mediante microservicios aislados: (1) un servicio de base de datos con "
-        "PostgreSQL 15 y PostGIS 3.3, y (2) una API en Python 3.11 con FastAPI y Uvicorn. Las pruebas de estrés se ejecutaron en un entorno "
-        "controlado de 14 núcleos a 5.2 GHz con 32 GB de RAM DDR5 sobre Linux kernel 6.6 (WSL2)."
+        "PostgreSQL 15 y PostGIS 3.3, (2) una API en Python 3.11 con FastAPI y Uvicorn, y (3) un proxy reverso Nginx configurado con el "
+        "módulo ModSecurity v3 y el conjunto de reglas perimetrales OWASP Core Rule Set (CRS v3.3). Las pruebas de estrés se ejecutaron en "
+        "un entorno controlado con un procesador Intel Core Ultra 5 245KF de 14 núcleos a 5.2 GHz con 32 GB de RAM DDR5 y almacenamiento "
+        "NVMe PCIe 4.0 sobre Linux kernel 6.6 (WSL2)."
     )
 
     add_heading_2("3.4. Vectores de Prueba y Métricas de Rendimiento")
     add_p(
         "Se estructuraron seis vectores de explotación basados en las directrices de prueba de inyección de la Web Security Testing Guide (OWASP Foundation, 2023), "
-        "orientados a las tres dimensiones de la tríada CIA (Confidencialidad, Integridad y Disponibilidad, resumidos en el Apéndice 1). "
-        "La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
-        "(1 a 100 clientes), registrando métricas de latencia (media, p50, p95, p99) y throughput (req/s)."
+        "orientados a las tres dimensiones de la tríada CIA (Confidencialidad, Integridad y Disponibilidad). "
+        "La batería experimental comprendió dos categorías de vectores: (a) vectores de inyección espacial directa (V1 a V3), dirigidos contra predicados "
+        "topológicos nativos y funciones de análisis geométrico en PostGIS; y (b) vectores de inyección SQL convencional aplicados al flujo transaccional y "
+        "administrativo del catastro (V4 a V6), utilizados como línea base de control para verificar la integridad del modelo de datos y la capacidad de "
+        "detección de herramientas perimetrales. La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
+        "(1 a 100 clientes) sobre el endpoint de proximidad territorial (/predios/radio), registrando métricas de latencia (media, p50, p95, p99) y throughput (req/s). "
+        "La caracterización técnica de los seis vectores de explotación, sus endpoints y los payloads representativos se detallan en el Apéndice 1."
     )
 
     # SECCIÓN 4: SIMULACIONES DE ATAQUE
@@ -284,13 +295,15 @@ def create_imjeta_doc():
     add_p(
         "Aprovechando la complejidad geométrica base de las parcelas (promedio de 9.0 vértices y hasta 222 vértices por polígono), el atacante inyectó "
         "en el endpoint GET /api/v1/vulnerable/predios/analisis-expansion una subconsulta con un producto cruzado espacial O(N^2) que computa buffers "
-        "con alta densidad de segmentos por cuadrante. Como se evidencia empíricamente en la Figure 1, la inyección del producto cartesiano "
-        "desencadena una explosión de complejidad algorítmica O(N^2) que eleva la latencia desde 10.8 ms hasta 1,665.16 ms a medida que los "
+        "con alta densidad de segmentos por cuadrante. Para aislar el coste computacional del producto cartesiano sin inducir un bloqueo permanente del "
+        "servidor de pruebas, la inyección evaluó un subconjunto sistemático de 20 parcelas cruzadas entre sí (400 pares de polígonos), variando la "
+        "resolución de vértices en el buffer. Como se evidencia empíricamente en la Figura 1, esta inyección del producto cartesiano "
+        "desencadena una explosión de complejidad algorítmica O(N^2) que eleva la latencia desde 10.8 ms hasta 1,692.1 ms a medida que los "
         "vértices evaluados en el buffer crecen de 14,400 a más de 345,600 puntos, saturando los workers de PostgreSQL en el procesador "
         "Intel Core Ultra 5 245KF. En contraste, la arquitectura mitigada preserva una latencia acotada de ~15 ms al restringir los parámetros a "
         "escalares validados mediante Pydantic y GeoAlchemy2."
     )
-    add_figure("figures/fig3_spatial_dos_complexity.png", "Figure 1. Curva de degeneración algorítmica cuadrática O(N²) en PostGIS/GEOS ante inyección de sobrecarga geométrica vs. mitigación acotada", width_inches=5.4)
+    add_figure("figures/fig3_spatial_dos_complexity.png", "Figura 1. Curva de degeneración algorítmica cuadrática O(N²) en PostGIS/GEOS ante inyección de sobrecarga geométrica vs. mitigación acotada", width_inches=5.4)
 
     add_heading_2("4.4. Simulación 4: Fraude en Ficha Catastral (Tampering de Autovalúo)")
     add_p(
@@ -303,7 +316,7 @@ def create_imjeta_doc():
     add_heading_2("4.5. Simulación 5: Borrado Destructivo de Cartografía Predial (Data Destruction)")
     add_p(
         "En el endpoint DELETE /api/v1/vulnerable/predios/borrar, la inyección del payload literal '0101' OR '1'='1' en el parámetro de filtrado sectorial "
-        "transformó la sentencia en una eliminación incondicional de registros (DELETE FROM tg_lote WHERE cod_sector = '0101' OR '1'='1'), suprimiendo las 1,500 parcelas "
+        "transformó la sentencia en una eliminación incondicional de registros (DELETE FROM tg_lote WHERE cod_sector = '0101' OR '1'='1'), suprimiendo las 487 parcelas "
         "y dejando el visor webmapping sin cartografía. En contraste, el endpoint mitigado validó el sector mediante el patrón estricto ^\\d{4}$, "
         "rechazando la inyección con código HTTP 422 y preservando intacta la base catastral."
     )
@@ -318,17 +331,20 @@ def create_imjeta_doc():
     # SECCIÓN 5: MITIGACIÓN Y EVALUACIÓN
     add_heading_1("5. Estrategias de Mitigación y Evaluación de Rendimiento")
     add_p(
-        "Como se ilustra en la Figure 2, la mitigación arquitectónica integró un pipeline de defensa en profundidad "
-        "con tres barreras secuenciales: (1) Barrera 1 con Pydantic para tipado estricto y acotamiento de límites físicos; "
-        "(2) Barrera 2 con Shapely para validación topológica y descarte de geometrías degeneradas en memoria de aplicación "
-        "(retornando HTTP 422 antes de interactuar con la base de datos); y (3) Barrera 3 con GeoAlchemy2 y SQLAlchemy para "
-        "compilación nativa mediante variables de vinculación binarias (EWKB) y reutilización de planes de ejecución (prepared statements)."
+        "Como se ilustra en la Figura 2, la mitigación arquitectónica integró un pipeline de defensa en profundidad "
+        "con tres barreras secuenciales, donde la Barrera 2 (Shapely) opera como filtro de integridad topológica en memoria "
+        "activado específicamente ante cargas útiles geométricas complejas (WKT o GeoJSON, descartando anomalías o geometrías "
+        "auto-intersecadas con HTTP 422 antes de interactuar con la base de datos), mientras que los parámetros puramente numéricos "
+        "o alfanuméricos transitan directamente desde la validación estricta de Pydantic (Barrera 1) hacia la compilación de "
+        "variables tipadas (EWKB) y sentencias preparadas en GeoAlchemy2 y SQLAlchemy (Barrera 3)."
     )
-    add_figure("figures/fig1_defense_pipeline.png", "Figure 2. Arquitectura del pipeline de defensa en profundidad de tres barreras para servicios catastrales en PostGIS", width_inches=5.8)
+    add_figure("figures/fig1_defense_pipeline.png", "Figura 2. Arquitectura del pipeline de defensa en profundidad de tres barreras para servicios catastrales en PostGIS", width_inches=5.8)
 
     add_p(
-        "Se ejecutó una prueba de carga comparativa de 300 peticiones con 10 clientes concurrentes entre la API vulnerable y la API mitigada. "
-        "Los resultados se resumen en la Tabla 1.",
+        "Para la evaluación empírica de rendimiento y latencia (Tabla 1 y Figura 3), se seleccionó como escenario representativo "
+        "de alta frecuencia transaccional el endpoint de consulta espacial por radio (GET /api/v1/vulnerable/predios/radio frente a "
+        "GET /api/v1/mitigated/predios/radio), evaluando peticiones válidas bajo una carga estandarizada de 300 peticiones con 10 "
+        "clientes concurrentes. Los resultados se resumen en la Tabla 1.",
         indent=True
     )
 
@@ -337,7 +353,7 @@ def create_imjeta_doc():
     p_tlabel.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_tlabel.paragraph_format.space_before = Pt(8)
     p_tlabel.paragraph_format.space_after = Pt(4)
-    r_tl = p_tlabel.add_run("Table 1: Comparativa de Rendimiento y Latencia entre API Vulnerable y API Mitigada")
+    r_tl = p_tlabel.add_run("Tabla 1: Comparativa de Rendimiento y Latencia entre API Vulnerable y API Mitigada")
     set_font(r_tl, size=10, bold=True)
 
     table_data = [
@@ -347,7 +363,7 @@ def create_imjeta_doc():
         ["Percentil 50 (Mediana / p50)", "15.37 ms", "18.42 ms", "+3.05 ms"],
         ["Percentil 95 (p95)", "31.49 ms", "32.63 ms", "+1.14 ms"],
         ["Percentil 99 (p99)", "43.75 ms", "38.24 ms", "-5.51 ms (-12.59%)"],
-        ["Tasa de Fallos", "0.0%", "0.0%", "0.0%"]
+        ["Tasa de Error HTTP (Error Rate)", "0.0%", "0.0%", "0.0%"]
     ]
 
     tbl = doc.add_table(rows=len(table_data), cols=4)
@@ -370,36 +386,41 @@ def create_imjeta_doc():
     set_font(r_tnote, size=9, italic=True)
 
     add_p(
-        "Para caracterizar la resiliencia bajo estrés progresivo, se evaluó una batería de concurrencia escalonada de 1 a 100 clientes concurrentes. "
-        "Como se evidencia en la Figure 3(a), el throughput de la arquitectura mitigada escala eficientemente alcanzando una meseta estable superior a "
-        "450 req/s sin degradación por bloqueos. Asimismo, la Figure 3(b) demuestra que la latencia en el percentil 99 (p99) de la arquitectura "
-        "mitigada se mantiene sistemáticamente controlada e inferior a la de la versión vulnerable gracias a la reutilización de planes de "
-        "ejecución en PostgreSQL.",
+        "Para medir la resiliencia bajo estrés progresivo, se evaluó una serie de concurrencia escalonada de 1 a 100 clientes concurrentes. "
+        "Como se evidencia en la Figura 3(a), el throughput de la arquitectura mitigada escala eficientemente alcanzando una meseta estable superior a "
+        "450 req/s sin degradación por bloqueos. Asimismo, la Figura 3(b) revela que la arquitectura mitigada neutraliza los picos severos de "
+        "latencia de cola observados en la API vulnerable bajo baja concurrencia (140.8 ms frente a 33.1 ms a 5 clientes). A niveles de estrés "
+        "elevados (50 a 100 clientes), el percentil 99 de la versión mitigada experimenta un incremento moderado (~101 ms vs. ~62 ms), atribuible "
+        "a la serialización y sobrecosto de CPU en la capa de aplicación (Pydantic/ORM), lo que representa un compromiso aceptable frente a las "
+        "garantías de seguridad obtenidas.",
         indent=True
     )
-    add_figure("figures/fig2_concurrency_latency.png", "Figure 3. Comparativa empírica de rendimiento (Throughput) y percentiles de latencia (p50 y p99) ante concurrencia escalonada (1 a 100 clientes)", width_inches=5.8)
+    add_figure("figures/fig2_concurrency_latency.png", "Figura 3. Comparativa empírica de rendimiento (Throughput) y percentiles de latencia (p50 y p99) ante concurrencia escalonada (1 a 100 clientes)", width_inches=5.8)
 
     # SECCIÓN 6: DISCUSIÓN
     add_heading_1("6. Discusión")
     add_p(
         "Los resultados empíricos demuestran que la mitigación basada en GeoAlchemy2 y validación previa con Shapely introduce un overhead "
         "de latencia media de apenas 2.63 milisegundos por petición (+15.24%), manteniendo un throughput de 484.36 peticiones por segundo. "
-        "Particularmente notable es la reducción en la latencia de cola en el percentil 99 (p99), que pasó de 43.75 ms a 38.24 ms (-12.59%), "
-        "lo cual se atribuye a la reutilización eficiente de planes de ejecución compilados (prepared statements) en PostgreSQL al evitar el "
-        "re-parseo continuo de consultas dinámicas. Este incremento marginal en el promedio es insignificante frente a la ganancia de seguridad, "
-        "neutralizando la exfiltración masiva de datos catastrales, el canal lateral de error y la denegación de servicio espacial. Se concluye "
-        "que los WAFs tradicionales son ineficaces ante payloads espaciales, demandando esquemas de validación sintáctica con conciencia "
-        "espacial integrados en el código de la aplicación."
+        "Un aspecto relevante para el diseño de software es el comportamiento en el percentil 99 (p99): en la prueba de carga estandarizada "
+        "(10 clientes), la latencia de cola disminuyó de 43.75 ms a 38.24 ms (-12.59%) gracias a la reutilización eficiente de planes de "
+        "ejecución preparados (prepared statements) en PostgreSQL al evitar el re-parseo continuo de consultas dinámicas, mientras que bajo estrés "
+        "masivo concurrente el sobrecosto de serialización en la capa de aplicación modula la respuesta sin comprometer la estabilidad ni registrar "
+        "fallos (0.0%). Este incremento marginal en el promedio es insignificante frente a la ganancia de seguridad, neutralizando la exfiltración "
+        "masiva de datos catastrales, el canal lateral de error y la denegación de servicio espacial. Se concluye que los WAFs tradicionales "
+        "son ineficaces ante payloads espaciales, demandando esquemas de validación sintáctica con conciencia espacial integrados en el código de la aplicación."
     )
     add_p(
-        "La Figure 4 sintetiza la tasa de mitigación y bloqueo de ataques (%) a través de los seis vectores evaluados, contrastando una "
+        "La Figura 4 sintetiza la tasa de mitigación y bloqueo de ataques (%) a través de los seis vectores evaluados, contrastando una "
         "arquitectura desprotegida, un WAF tradicional basado en firmas (OWASP ModSecurity Core Rule Set) y el pipeline propuesto. "
         "Mientras que el WAF genérico no logra identificar los ataques espaciales (0% a 20% de bloqueo en vectores topológicos como "
-        "ST_DWithin y ST_Intersects al carecer de gramática geoespacial), el pipeline de tres barreras logra un bloqueo completo del 100% "
-        "en todos los vectores evaluados de la tríada CIA.",
+        "ST_DWithin y ST_Intersects al carecer de gramática geoespacial), el bloqueo residual del 15% al 20% registrado por el WAF en V1 y V2 "
+        "se debió exclusivamente a la detección de tokens SQL convencionales (como operadores booleanos OR o comillas desparejadas) en ciertas "
+        "variantes del payload, y no a una inspección semántica de las funciones topológicas subyacentes, como lo demuestra su inoperancia absoluta "
+        "(0%) frente al vector DoS en V3. En contraste, el pipeline de tres barreras logra un bloqueo completo del 100% en todos los vectores evaluados de la tríada CIA.",
         indent=True
     )
-    add_figure("figures/fig4_attack_mitigation_matrix.png", "Figure 4. Tasa de mitigación y bloqueo de ataques (%) entre arquitectura desprotegida, WAF tradicional (OWASP CRS) y pipeline propuesto", width_inches=5.8)
+    add_figure("figures/fig4_attack_mitigation_matrix.png", "Figura 4. Tasa de mitigación y bloqueo de ataques (%) entre arquitectura desprotegida, WAF tradicional (OWASP CRS) y pipeline propuesto", width_inches=5.8)
     add_run_in(
         "Independencia de plataforma y validez del benchmarking.",
         "Si bien las métricas absolutas de latencia se obtuvieron sobre una estación de trabajo con procesador Intel Core Ultra 5 245KF, "
@@ -427,7 +448,7 @@ def create_imjeta_doc():
     add_p(
         "Este artículo formalizó y demostró empíricamente la viabilidad de seis vectores de inyección SQL espacial en sistemas "
         "de información catastral basados en PostGIS, evidenciando que las funciones topológicas nativas no garantizan aislamiento de datos "
-        "cuando se construyen mediante concatenación de cadenas. La evaluación experimental sobre 1,500 parcelas catastrales reales "
+        "cuando se construyen mediante concatenación de cadenas. La evaluación experimental sobre 487 parcelas catastrales reales "
         "(ISO 19152 LADM) comprobó que atacantes no autenticados pueden evadir límites zonales, reconstruir credenciales mediante canales "
         "laterales de error geométrico, inducir denegación de servicio espacial por sobrecarga algorítmica cuadrática, alterar fichas prediales "
         "tributarias y ejecutar borrados cartográficos masivos. Frente a ello, la adopción de una arquitectura de defensa en profundidad basada "
@@ -487,7 +508,7 @@ def create_imjeta_doc():
     doc.add_page_break()
     add_heading_1("Appendix 1")
     add_p(
-        "Instrumento de Investigación: Batería Experimental de Vectores de Inyección SQL Espacial. "
+        "Instrumento de Investigación: Batería de Vectores de Explotación: Operadores Espaciales (V1–V3) y Flujo Catastral / Control (V4–V6). "
         "A continuación se detallan los seis vectores de explotación diseñados y ejecutados para evaluar la seguridad de la API catastral:"
     )
 
@@ -497,7 +518,7 @@ def create_imjeta_doc():
         ["2. Canal Lateral Ciego", "GET /api/v1/vulnerable/predios/poligono", "POLYGON(...) AND 1=(CASE WHEN ... THEN CAST(ST_GeomFromText('ERR') AS INT) ELSE 1 END)", "Confidencialidad: Exfiltración carácter por carácter de hashes."],
         ["3. DoS Algorítmico", "GET /api/v1/vulnerable/predios/analisis-expansion", "10 + (SELECT COUNT(*) FROM tg_lote a CROSS JOIN ... ST_Buffer(..., 100))", "Disponibilidad: Explosión combinatoria O(N^2), saturación de CPU."],
         ["4. Tampering Predial", "POST /api/v1/vulnerable/ficha/modificar", "id_lote = '21010101000000', nuevo_autovaluo = 0, nuevo_titular = 'HACKER'", "Integridad: Alteración tributaria y suplantación de titularidad."],
-        ["5. Borrado Masivo", "DELETE /api/v1/vulnerable/predios/borrar", "filtro_sector = '0101' OR '1'='1'", "Integridad y Disponibilidad: Eliminación incondicional de 1,500 lotes."],
+        ["5. Borrado Masivo", "DELETE /api/v1/vulnerable/predios/borrar", "filtro_sector = '0101' OR '1'='1'", "Integridad y Disponibilidad: Eliminación incondicional de 487 lotes."],
         ["6. Evasión de Auth", "POST /api/v1/vulnerable/auth/login", "username = admin' --", "Confidencialidad e Integridad: Escalación a superadmin_catastro."]
     ]
 
