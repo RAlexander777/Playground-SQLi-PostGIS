@@ -123,6 +123,12 @@
       box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2);
     }
 
+    .segmented-btn.active-lang {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
+
     /* Barra de Búsqueda Superior */
     .search-bar-top {
       background: var(--bg-card);
@@ -263,25 +269,35 @@
     <div class="d-flex flex-wrap align-items-center gap-3">
       <div class="d-flex align-items-center gap-2 font-mono" style="font-size: 0.8rem;">
         <span class="status-dot online" id="dotDb"></span>
-        <span class="text-secondary">Lotes:</span>
+        <span class="text-secondary" id="lblTagLotes">Lotes:</span>
         <strong id="lblTotalLotes" class="text-dark">...</strong>
-        <span class="text-secondary ms-2">Titulares:</span>
+        <span class="text-secondary ms-2" id="lblTagTitulares">Titulares:</span>
         <strong id="lblTotalTitulares" class="text-dark">...</strong>
       </div>
 
-      <button class="btn btn-sm btn-outline-secondary font-mono" onclick="resetDatabase()" title="Restaura la muestra original de 487 lotes">
-        <i class="fa-solid fa-rotate-right me-1"></i> Restaurar BD
+      <button class="btn btn-sm btn-outline-secondary font-mono" onclick="resetDatabase()" id="btnResetDb" title="Restaura la muestra original de 487 lotes">
+        <i class="fa-solid fa-rotate-right me-1"></i> <span id="txtResetDb">Restaurar BD</span>
       </button>
 
       <!-- SELECTOR DE MODO -->
       <div class="segmented-control">
         <button id="btnModeVuln" class="segmented-btn active-vuln" onclick="setMode('vulnerable')">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>Vulnerable</span>
+          <span id="txtModeVuln">Vulnerable</span>
         </button>
         <button id="btnModeMit" class="segmented-btn" onclick="setMode('mitigated')">
           <i class="fa-solid fa-shield"></i>
-          <span>Mitigado (3 Barreras)</span>
+          <span id="txtModeMit">Mitigado (3 Barreras)</span>
+        </button>
+      </div>
+
+      <!-- SELECTOR DE IDIOMA (ES / EN) -->
+      <div class="segmented-control" title="Cambiar Idioma / Switch Language">
+        <button id="btnLangES" class="segmented-btn active-lang" onclick="setLanguage('es')">
+          <span>ES</span>
+        </button>
+        <button id="btnLangEN" class="segmented-btn" onclick="setLanguage('en')">
+          <span>EN</span>
         </button>
       </div>
     </div>
@@ -291,9 +307,9 @@
   <section class="search-bar-top">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <span class="fw-bold" style="font-size: 0.85rem;">
-        <i class="fa-solid fa-magnifying-glass text-primary me-1"></i> Búsqueda Predial & Evaluación SQLi Manual
+        <i class="fa-solid fa-magnifying-glass text-primary me-1"></i> <span id="txtSearchTitle">Búsqueda Predial & Evaluación SQLi Manual</span>
       </span>
-      <span class="text-secondary" style="font-size: 0.72rem;">Evalúa cómo se compilan las consultas dinámicas vs parámetros ORM</span>
+      <span class="text-secondary" style="font-size: 0.72rem;" id="txtSearchSub">Evalúa cómo se compilan las consultas dinámicas vs parámetros ORM</span>
     </div>
 
     <div class="row g-2 align-items-center">
@@ -302,10 +318,10 @@
           <input type="text" id="inputCriterio" class="form-control font-mono" style="font-size: 0.82rem;"
                  placeholder="Ingresa ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)..."
                  onkeydown="if(event.key === 'Enter') ejecutarBusquedaLotes()">
-          <button class="btn btn-primary px-3" onclick="ejecutarBusquedaLotes()" style="font-size: 0.82rem;">
+          <button class="btn btn-primary px-3" onclick="ejecutarBusquedaLotes()" style="font-size: 0.82rem;" id="btnEvalSearch">
             Evaluar
           </button>
-          <button class="btn btn-outline-secondary px-2" onclick="limpiarBusqueda()" style="font-size: 0.82rem;">
+          <button class="btn btn-outline-secondary px-2" onclick="limpiarBusqueda()" style="font-size: 0.82rem;" id="btnClearSearch">
             Limpiar
           </button>
         </div>
@@ -314,11 +330,11 @@
       <!-- Presets de Carga Rápida -->
       <div class="col-lg-6">
         <div class="d-flex flex-wrap gap-1 align-items-center justify-content-lg-end">
-          <span class="text-secondary me-1" style="font-size: 0.72rem;">Cargas Rápidas:</span>
-          <button class="btn btn-sm btn-light border font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload('21010101000000')">Normal (1 lote)</button>
-          <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' OR '1'='1&quot;)">Tautología (' OR '1'='1)</button>
-          <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;%' OR 1=1 --&quot;)">Comentario (1=1 --)</button>
-          <button class="btn btn-sm btn-light border text-warning font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' UNION SELECT username, role, 'EXFILTRADO', password_hash, 0, NULL FROM catastro_usuarios --&quot;)">UNION Passwords</button>
+          <span class="text-secondary me-1" style="font-size: 0.72rem;" id="txtQuickLoads">Cargas Rápidas:</span>
+          <button class="btn btn-sm btn-light border font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload('21010101000000')" id="btnPresetNormal">Normal (1 lote)</button>
+          <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' OR '1'='1&quot;)" id="btnPresetTaut">Tautología (' OR '1'='1)</button>
+          <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;%' OR 1=1 --&quot;)" id="btnPresetComment">Comentario (1=1 --)</button>
+          <button class="btn btn-sm btn-light border text-warning font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' UNION SELECT username, role, 'EXFILTRADO', password_hash, 0, NULL FROM catastro_usuarios --&quot;)" id="btnPresetUnion">UNION Passwords</button>
         </div>
       </div>
     </div>
@@ -329,11 +345,11 @@
         <table class="table table-clean">
           <thead>
             <tr>
-              <th>ID LOTE</th>
-              <th>SECTOR</th>
-              <th>TITULAR</th>
-              <th>AUTOVALÚO</th>
-              <th>ACCIÓN</th>
+              <th id="thSId">ID LOTE</th>
+              <th id="thSSector">SECTOR</th>
+              <th id="thSTitular">TITULAR</th>
+              <th id="thSAuto">AUTOVALÚO</th>
+              <th id="thSAction">ACCIÓN</th>
             </tr>
           </thead>
           <tbody id="tblResultadosBusqueda" class="font-mono"></tbody>
@@ -347,7 +363,7 @@
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="d-flex align-items-center gap-2">
         <span class="fw-bold" style="font-size: 0.82rem;">
-          <i class="fa-solid fa-layer-group text-primary me-1"></i> Pipeline de Mitigación (Defensa en Profundidad)
+          <i class="fa-solid fa-layer-group text-primary me-1"></i> <span id="txtPipelineTitle">Pipeline de Mitigación (Defensa en Profundidad)</span>
         </span>
         <span class="badge bg-danger font-mono" id="pipelineStatusBadge" style="font-size: 0.68rem;">MODO VULNERABLE</span>
       </div>
@@ -359,11 +375,11 @@
       <div class="col-md">
         <div class="barrier-box" id="cardBarrier1">
           <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold text-primary" style="font-size: 0.75rem;">Barrera 1 (API)</span>
+            <span class="fw-bold text-primary" style="font-size: 0.75rem;" id="txtB1Tag">Barrera 1 (API)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier1" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;">Pydantic & Acotamiento</div>
-          <div class="text-secondary" style="font-size: 0.7rem;">Tipado numérico, regex y validación de rangos.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB1Name">Pydantic & Acotamiento</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB1Desc">Tipado numérico, regex y validación de rangos.</div>
         </div>
       </div>
 
@@ -375,11 +391,11 @@
       <div class="col-md">
         <div class="barrier-box" id="cardBarrier2">
           <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold text-info" style="font-size: 0.75rem;">Barrera 2 (App)</span>
+            <span class="fw-bold text-info" style="font-size: 0.75rem;" id="txtB2Tag">Barrera 2 (App)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier2" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;">Shapely Topology</div>
-          <div class="text-secondary" style="font-size: 0.7rem;">Validación topológica WKT en memoria previa a SQL.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB2Name">Shapely Topology</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB2Desc">Validación topológica WKT en memoria previa a SQL.</div>
         </div>
       </div>
 
@@ -391,20 +407,20 @@
       <div class="col-md">
         <div class="barrier-box" id="cardBarrier3">
           <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold text-success" style="font-size: 0.75rem;">Barrera 3 (Motor)</span>
+            <span class="fw-bold text-success" style="font-size: 0.75rem;" id="txtB3Tag">Barrera 3 (Motor)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier3" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;">GeoAlchemy2 / Bind ORM</div>
-          <div class="text-secondary" style="font-size: 0.7rem;">Prepared statements y parámetros compilados.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB3Name">GeoAlchemy2 / Bind ORM</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB3Desc">Prepared statements y parámetros compilados.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 4. ESPACIO DE TRABAJO PRINCIPAL (MAPA + INSPECTOR A LA IZQUIERDA, AMENAZAS + CATASTRO A LA DERECHA) -->
+  <!-- 4. ESPACIO DE TRABAJO PRINCIPAL -->
   <main class="row g-3">
     
-    <!-- COLUMNA IZQUIERDA: VISOR CARTOGRÁFICO E INSPECTOR SQL DEBAJO -->
+    <!-- COLUMNA IZQUIERDA -->
     <div class="col-lg-7">
       
       <!-- VISOR CARTOGRÁFICO OPENSTREETMAP -->
@@ -412,10 +428,10 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-map text-primary"></i>
-            <span class="fw-bold" style="font-size: 0.85rem;">Cartografía Catastral de Puno</span>
+            <span class="fw-bold" style="font-size: 0.85rem;" id="txtMapTitle">Cartografía Catastral de Puno</span>
             <span class="badge bg-light text-secondary border" id="lblMapStatus" style="font-size: 0.68rem;">Listo</span>
           </div>
-          <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" onclick="fitCatastroBounds()" style="font-size: 0.72rem;">
+          <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" onclick="fitCatastroBounds()" style="font-size: 0.72rem;" id="btnCenterMap">
             <i class="fa-solid fa-expand me-1"></i> Centrar
           </button>
         </div>
@@ -423,16 +439,16 @@
         <div id="map"></div>
 
         <div class="d-flex justify-content-between align-items-center mt-2 text-secondary" style="font-size: 0.72rem;">
-          <span>Capa base: <strong>OpenStreetMap</strong>. Polígonos en <strong class="text-danger">rojo</strong> indican parcelas expuestas o afectadas.</span>
+          <span id="txtMapLegend">Capa base: <strong>OpenStreetMap</strong>. Polígonos en <strong class="text-danger">rojo</strong> indican parcelas expuestas o afectadas.</span>
           <span class="font-mono" id="lblCoords">Puno, Perú</span>
         </div>
       </div>
 
-      <!-- INSPECTOR DE EJECUCIÓN SQL (POSICIONADO DIRECTAMENTE BAJO EL MAPA) -->
+      <!-- INSPECTOR DE EJECUCIÓN SQL -->
       <div class="app-card">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-bold" style="font-size: 0.85rem;">
-            <i class="fa-solid fa-terminal text-primary me-1"></i> Inspector de Ejecución SQL & Diagnóstico
+            <i class="fa-solid fa-terminal text-primary me-1"></i> <span id="txtInspectorTitle">Inspector de Ejecución SQL & Diagnóstico</span>
           </span>
           <span id="badgeVerdict" class="badge bg-secondary font-mono" style="font-size: 0.7rem;">EN ESPERA</span>
         </div>
@@ -444,19 +460,19 @@
         <div class="row g-2 mb-2 font-mono" style="font-size: 0.75rem;">
           <div class="col-4">
             <div class="p-2 rounded bg-light border">
-              <span class="text-secondary d-block" style="font-size: 0.65rem;">LATENCIA</span>
+              <span class="text-secondary d-block" style="font-size: 0.65rem;" id="txtMetricLat">LATENCIA</span>
               <strong id="lblLatency" class="text-dark">- ms</strong>
             </div>
           </div>
           <div class="col-4">
             <div class="p-2 rounded bg-light border">
-              <span class="text-secondary d-block" style="font-size: 0.65rem;">ESTADO HTTP</span>
+              <span class="text-secondary d-block" style="font-size: 0.65rem;" id="txtMetricHttp">ESTADO HTTP</span>
               <strong id="lblHttpCode" class="text-dark">-</strong>
             </div>
           </div>
           <div class="col-4">
             <div class="p-2 rounded bg-light border">
-              <span class="text-secondary d-block" style="font-size: 0.65rem;">DEFENSA ACTIVA</span>
+              <span class="text-secondary d-block" style="font-size: 0.65rem;" id="txtMetricDef">DEFENSA ACTIVA</span>
               <strong id="lblActiveBarrier" class="text-primary">Ninguna</strong>
             </div>
           </div>
@@ -471,16 +487,16 @@
 
     </div>
 
-    <!-- COLUMNA DERECHA: LOS 6 VECTORES DE ATAQUE Y FICHAS CATASTRALES -->
+    <!-- COLUMNA DERECHA -->
     <div class="col-lg-5">
       
       <!-- BATERÍA DE LAS 6 AMENAZAS -->
       <div class="app-card mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-bold" style="font-size: 0.85rem;">
-            <i class="fa-solid fa-flask-vial text-primary me-1"></i> Vectores de Explotación (V1 - V6)
+            <i class="fa-solid fa-flask-vial text-primary me-1"></i> <span id="txtThreatsTitle">Vectores de Explotación (V1 - V6)</span>
           </span>
-          <span class="text-secondary" style="font-size: 0.72rem;">Haz clic para ejecutar</span>
+          <span class="text-secondary" style="font-size: 0.72rem;" id="txtThreatsSub">Haz clic para ejecutar</span>
         </div>
 
         <div class="d-flex flex-column gap-2">
@@ -490,7 +506,7 @@
               <span class="fw-bold text-danger" style="font-size: 0.78rem;">1. Spatial Logic Bypass</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/radio</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV1Desc">
               Rompe el filtro de proximidad <code>ST_DWithin</code> mediante tautología <code>50) OR (1=1</code>.
             </div>
           </div>
@@ -501,11 +517,11 @@
               <span class="fw-bold text-warning" style="font-size: 0.78rem;">2. Error-Based Spatial SQLi</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/poligono</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV2Desc">
               Canal lateral: fuerza excepciones en GEOS para inferir contraseñas bit a bit.
             </div>
             <div class="mt-1 pt-1 border-top d-flex justify-content-end">
-              <button class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.65rem;" onclick="event.stopPropagation(); startLiveErrorBlindExfiltration()">
+              <button class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.65rem;" onclick="event.stopPropagation(); startLiveErrorBlindExfiltration()" id="btnSimBlind">
                 <i class="fa-solid fa-play me-1"></i> Simular Inferencia Ciega
               </button>
             </div>
@@ -517,7 +533,7 @@
               <span class="fw-bold text-danger" style="font-size: 0.78rem;">3. Spatial DoS (Algorithmic Complexity)</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /analisis-expansion</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV3Desc">
               Fuerza producto cruzado O(N²) en <code>ST_Buffer</code> saturando la CPU de PostgreSQL.
             </div>
           </div>
@@ -528,7 +544,7 @@
               <span class="fw-bold text-warning" style="font-size: 0.78rem;">4. Fraude Catastral (Tampering)</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /ficha/modificar</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV4Desc">
               Inyección en UPDATE para reducir autovalúo a S/ 0.00 y usurpar titularidad predial.
             </div>
           </div>
@@ -539,7 +555,7 @@
               <span class="fw-bold text-danger" style="font-size: 0.78rem;">5. Destrucción de Cartografía</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">DELETE /predios/borrar</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV5Desc">
               Tautología <code>0101' OR '1'='1</code> que purga incondicionalmente las parcelas del catastro.
             </div>
           </div>
@@ -550,34 +566,34 @@
               <span class="fw-bold text-primary" style="font-size: 0.78rem;">6. Bypass de Autenticación</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /auth/login</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;">
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV6Desc">
               Comentario SQL <code>admin' --</code> que anula la verificación de password otorgando acceso administrativo.
             </div>
           </div>
         </div>
       </div>
 
-      <!-- FICHAS CATASTRALES (MUESTRA LADM LA_PARTY) -->
+      <!-- FICHAS CATASTRALES -->
       <div class="app-card">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-bold" style="font-size: 0.85rem;">
-            <i class="fa-solid fa-address-card text-primary me-1"></i> Integridad Catastral (Muestra LADM)
+            <i class="fa-solid fa-address-card text-primary me-1"></i> <span id="txtLadmTitle">Integridad Catastral (Muestra LADM)</span>
           </span>
-          <span class="text-secondary" style="font-size: 0.7rem;">Muestra en vivo</span>
+          <span class="text-secondary" style="font-size: 0.7rem;" id="txtLadmSub">Muestra en vivo</span>
         </div>
 
         <div class="table-responsive" style="max-height: 195px; overflow-y: auto;">
           <table class="table table-clean">
             <thead>
               <tr>
-                <th>ID LOTE</th>
-                <th>DNI</th>
-                <th>TITULAR PREDIAL</th>
-                <th>AUTOVALÚO</th>
+                <th id="thLadmId">ID LOTE</th>
+                <th id="thLadmDni">DNI</th>
+                <th id="thLadmTitular">TITULAR PREDIAL</th>
+                <th id="thLadmAuto">AUTOVALÚO</th>
               </tr>
             </thead>
             <tbody id="tblTitulares" class="font-mono">
-              <tr><td colspan="4" class="text-center text-secondary py-2">Cargando datos catastrales...</td></tr>
+              <tr><td colspan="4" class="text-center text-secondary py-2" id="txtLadmLoading">Cargando datos catastrales...</td></tr>
             </tbody>
           </table>
         </div>
@@ -591,7 +607,228 @@
   
   <script>
     let activeMode = 'vulnerable';
+    let currentLang = 'es';
     const API_BASE = window.location.origin + '/api/v1';
+
+    // Diccionario Bilingüe (Español / Inglés)
+    const I18N = {
+      es: {
+        tagLotes: "Lotes:",
+        tagTitulares: "Titulares:",
+        resetDb: "Restaurar BD",
+        resetDbTitle: "Restaura la muestra original de 487 lotes",
+        modeVuln: "Vulnerable",
+        modeMit: "Mitigado (3 Barreras)",
+        searchTitle: "Búsqueda Predial & Evaluación SQLi Manual",
+        searchSub: "Evalúa cómo se compilan las consultas dinámicas vs parámetros ORM",
+        searchPlaceholder: "Ingresa ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)...",
+        evalBtn: "Evaluar",
+        clearBtn: "Limpiar",
+        quickLoads: "Cargas Rápidas:",
+        presetNormal: "Normal (1 lote)",
+        presetTaut: "Tautología (' OR '1'='1)",
+        presetComment: "Comentario (1=1 --)",
+        presetUnion: "UNION Passwords",
+        thId: "ID LOTE",
+        thSector: "SECTOR",
+        thTitular: "TITULAR",
+        thAuto: "AUTOVALÚO",
+        thAction: "ACCIÓN",
+        actionInspect: "Inspeccionar",
+        pipelineTitle: "Pipeline de Mitigación (Defensa en Profundidad)",
+        pipeVulnBadge: "MODO VULNERABLE",
+        pipeMitBadge: "DEFENSA ACTIVA (3 BARRERAS)",
+        latencyPrefix: "Latencia:",
+        b1Tag: "Barrera 1 (API)",
+        b1Name: "Pydantic & Acotamiento",
+        b1Desc: "Tipado numérico, regex y validación de rangos.",
+        b2Tag: "Barrera 2 (App)",
+        b2Name: "Shapely Topology",
+        b2Desc: "Validación topológica WKT en memoria previa a SQL.",
+        b3Tag: "Barrera 3 (Motor)",
+        b3Name: "GeoAlchemy2 / Bind ORM",
+        b3Desc: "Prepared statements y parámetros compilados.",
+        mapTitle: "Cartografía Catastral de Puno",
+        mapReady: "Listo",
+        mapLoading: "Cargando...",
+        mapActive: "Activo",
+        mapError: "Error",
+        centerBtn: "Centrar",
+        mapLegend: "Capa base: <strong>OpenStreetMap</strong>. Polígonos en <strong class=\"text-danger\">rojo</strong> indican parcelas expuestas o afectadas.",
+        inspectorTitle: "Inspector de Ejecución SQL & Diagnóstico",
+        inspectorStandby: "EN ESPERA",
+        inspectorPrompt: "-- Selecciona un vector o realiza una búsqueda para inspeccionar la consulta generada --",
+        metricLat: "LATENCIA",
+        metricHttp: "ESTADO HTTP",
+        metricDef: "DEFENSA ACTIVA",
+        defNone: "Ninguna",
+        diagIntro: "<strong>Diagnóstico:</strong> Selecciona cualquier vector de la derecha o evalúa un criterio para observar el flujo interno de la consulta.",
+        threatsTitle: "Vectores de Explotación (V1 - V6)",
+        threatsSub: "Haz clic para ejecutar",
+        v1Desc: "Rompe el filtro de proximidad <code>ST_DWithin</code> mediante tautología <code>50) OR (1=1</code>.",
+        v2Desc: "Canal lateral: fuerza excepciones en GEOS para inferir contraseñas bit a bit.",
+        v2SimBtn: "Simular Inferencia Ciega",
+        v3Desc: "Fuerza producto cruzado O(N²) en <code>ST_Buffer</code> saturando la CPU de PostgreSQL.",
+        v4Desc: "Inyección en UPDATE para reducir autovalúo a S/ 0.00 y usurpar titularidad predial.",
+        v5Desc: "Tautología <code>0101' OR '1'='1</code> que purga incondicionalmente las parcelas del catastro.",
+        v6Desc: "Comentario SQL <code>admin' --</code> que anula la verificación de password otorgando acceso administrativo.",
+        ladmTitle: "Integridad Catastral (Muestra LADM)",
+        ladmSub: "Muestra en vivo",
+        ladmLoading: "Cargando datos catastrales...",
+        thLadmId: "ID LOTE",
+        thLadmDni: "DNI",
+        thLadmTitular: "TITULAR PREDIAL",
+        thLadmAuto: "AUTOVALÚO"
+      },
+      en: {
+        tagLotes: "Parcels:",
+        tagTitulares: "Owners:",
+        resetDb: "Reset DB",
+        resetDbTitle: "Restore original sample of 487 parcels",
+        modeVuln: "Vulnerable",
+        modeMit: "Mitigated (3 Barriers)",
+        searchTitle: "Cadastral Query & Manual SQLi Testing",
+        searchSub: "Observe dynamic SQL compilation vs. parameterized ORM queries",
+        searchPlaceholder: "Enter parcel ID, owner name, or payload (e.g. 21010101000000 or ' OR '1'='1)...",
+        evalBtn: "Execute",
+        clearBtn: "Clear",
+        quickLoads: "Quick Presets:",
+        presetNormal: "Normal (1 lot)",
+        presetTaut: "Tautology (' OR '1'='1)",
+        presetComment: "Comment (1=1 --)",
+        presetUnion: "UNION Passwords",
+        thId: "PARCEL ID",
+        thSector: "SECTOR",
+        thTitular: "OWNER",
+        thAuto: "VALUATION",
+        thAction: "ACTION",
+        actionInspect: "Inspect",
+        pipelineTitle: "Mitigation Pipeline (Defense-in-Depth)",
+        pipeVulnBadge: "VULNERABLE MODE",
+        pipeMitBadge: "ACTIVE DEFENSE (3 BARRIERS)",
+        latencyPrefix: "Latency:",
+        b1Tag: "Barrier 1 (API)",
+        b1Name: "Pydantic & Bounding",
+        b1Desc: "Numeric types, regex masks, and bounded limits.",
+        b2Tag: "Barrier 2 (App)",
+        b2Name: "Shapely Topology",
+        b2Desc: "In-memory WKT topological validation prior to SQL.",
+        b3Tag: "Barrier 3 (Engine)",
+        b3Name: "GeoAlchemy2 / Bind ORM",
+        b3Desc: "Prepared statements and compiled binary parameters.",
+        mapTitle: "Puno Cadastral Cartography",
+        mapReady: "Ready",
+        mapLoading: "Loading...",
+        mapActive: "Active",
+        mapError: "Error",
+        centerBtn: "Center",
+        mapLegend: "Base layer: <strong>OpenStreetMap</strong>. Polygons in <strong class=\"text-danger\">red</strong> indicate exposed or affected parcels.",
+        inspectorTitle: "SQL Execution Inspector & Diagnostics",
+        inspectorStandby: "STANDBY",
+        inspectorPrompt: "-- Select an attack vector or run a query to inspect the generated statement --",
+        metricLat: "LATENCY",
+        metricHttp: "HTTP STATUS",
+        metricDef: "ACTIVE DEFENSE",
+        defNone: "None",
+        diagIntro: "<strong>Diagnosis:</strong> Select any vector on the right or enter search criteria to observe internal query flow.",
+        threatsTitle: "Exploitation Vectors (V1 - V6)",
+        threatsSub: "Click to trigger",
+        v1Desc: "Bypasses <code>ST_DWithin</code> proximity filter via tautology <code>50) OR (1=1</code>.",
+        v2Desc: "Side-channel oracle: triggers GEOS exceptions to infer passwords bit by bit.",
+        v2SimBtn: "Simulate Blind Inference",
+        v3Desc: "Forces O(N²) Cartesian product in <code>ST_Buffer</code> saturating PostgreSQL CPU.",
+        v4Desc: "UPDATE injection reducing valuation to S/ 0.00 and usurping parcel ownership.",
+        v5Desc: "Tautology <code>0101' OR '1'='1</code> unconditionally purging the cadastral repository.",
+        v6Desc: "SQL comment <code>admin' --</code> bypassing password verification with administrative access.",
+        ladmTitle: "Cadastral Integrity (LADM Sample)",
+        ladmSub: "Live sample",
+        ladmLoading: "Loading cadastral records...",
+        thLadmId: "PARCEL ID",
+        thLadmDni: "ID DOC",
+        thLadmTitular: "PARCEL OWNER",
+        thLadmAuto: "VALUATION"
+      }
+    };
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      const t = I18N[lang];
+      document.getElementById('btnLangES').className = `segmented-btn ${lang === 'es' ? 'active-lang' : ''}`;
+      document.getElementById('btnLangEN').className = `segmented-btn ${lang === 'en' ? 'active-lang' : ''}`;
+
+      // Header
+      document.getElementById('lblTagLotes').textContent = t.tagLotes;
+      document.getElementById('lblTagTitulares').textContent = t.tagTitulares;
+      document.getElementById('txtResetDb').textContent = t.resetDb;
+      document.getElementById('btnResetDb').title = t.resetDbTitle;
+      document.getElementById('txtModeVuln').textContent = t.modeVuln;
+      document.getElementById('txtModeMit').textContent = t.modeMit;
+
+      // Search Bar
+      document.getElementById('txtSearchTitle').textContent = t.searchTitle;
+      document.getElementById('txtSearchSub').textContent = t.searchSub;
+      document.getElementById('inputCriterio').placeholder = t.searchPlaceholder;
+      document.getElementById('btnEvalSearch').textContent = t.evalBtn;
+      document.getElementById('btnClearSearch').textContent = t.clearBtn;
+      document.getElementById('txtQuickLoads').textContent = t.quickLoads;
+      document.getElementById('btnPresetNormal').textContent = t.presetNormal;
+      document.getElementById('btnPresetTaut').textContent = t.presetTaut;
+      document.getElementById('btnPresetComment').textContent = t.presetComment;
+      document.getElementById('btnPresetUnion').textContent = t.presetUnion;
+      document.getElementById('thSId').textContent = t.thId;
+      document.getElementById('thSSector').textContent = t.thSector;
+      document.getElementById('thSTitular').textContent = t.thTitular;
+      document.getElementById('thSAuto').textContent = t.thAuto;
+      document.getElementById('thSAction').textContent = t.thAction;
+
+      // Pipeline
+      document.getElementById('txtPipelineTitle').textContent = t.pipelineTitle;
+      document.getElementById('pipelineStatusBadge').textContent = activeMode === 'vulnerable' ? t.pipeVulnBadge : t.pipeMitBadge;
+      document.getElementById('txtB1Tag').textContent = t.b1Tag;
+      document.getElementById('txtB1Name').textContent = t.b1Name;
+      document.getElementById('txtB1Desc').textContent = t.b1Desc;
+      document.getElementById('txtB2Tag').textContent = t.b2Tag;
+      document.getElementById('txtB2Name').textContent = t.b2Name;
+      document.getElementById('txtB2Desc').textContent = t.b2Desc;
+      document.getElementById('txtB3Tag').textContent = t.b3Tag;
+      document.getElementById('txtB3Name').textContent = t.b3Name;
+      document.getElementById('txtB3Desc').textContent = t.b3Desc;
+
+      // Map
+      document.getElementById('txtMapTitle').textContent = t.mapTitle;
+      document.getElementById('btnCenterMap').innerHTML = `<i class="fa-solid fa-expand me-1"></i> ${t.centerBtn}`;
+      document.getElementById('txtMapLegend').innerHTML = t.mapLegend;
+
+      // Inspector
+      document.getElementById('txtInspectorTitle').textContent = t.inspectorTitle;
+      document.getElementById('txtMetricLat').textContent = t.metricLat;
+      document.getElementById('txtMetricHttp').textContent = t.metricHttp;
+      document.getElementById('txtMetricDef').textContent = t.metricDef;
+
+      // Threats
+      document.getElementById('txtThreatsTitle').textContent = t.threatsTitle;
+      document.getElementById('txtThreatsSub').textContent = t.threatsSub;
+      document.getElementById('txtV1Desc').innerHTML = t.v1Desc;
+      document.getElementById('txtV2Desc').innerHTML = t.v2Desc;
+      document.getElementById('btnSimBlind').innerHTML = `<i class="fa-solid fa-play me-1"></i> ${t.v2SimBtn}`;
+      document.getElementById('txtV3Desc').innerHTML = t.v3Desc;
+      document.getElementById('txtV4Desc').innerHTML = t.v4Desc;
+      document.getElementById('txtV5Desc').innerHTML = t.v5Desc;
+      document.getElementById('txtV6Desc').innerHTML = t.v6Desc;
+
+      // LADM Table
+      document.getElementById('txtLadmTitle').textContent = t.ladmTitle;
+      document.getElementById('txtLadmSub').textContent = t.ladmSub;
+      document.getElementById('thLadmId').textContent = t.thLadmId;
+      document.getElementById('thLadmDni').textContent = t.thLadmDni;
+      document.getElementById('thLadmTitular').textContent = t.thLadmTitular;
+      document.getElementById('thLadmAuto').textContent = t.thLadmAuto;
+
+      // Re-render inspect message
+      if (document.getElementById('boxQuery').textContent.startsWith('-- Selecciona') || document.getElementById('boxQuery').textContent.startsWith('-- Select')) {
+        document.getElementById('boxQuery').textContent = t.inspectorPrompt;
+      }
+    }
 
     // Mapa Leaflet centrado en Puno
     const map = L.map('map', {
