@@ -106,7 +106,7 @@ PostGIS extends PostgreSQL with spatial data types and topological operators com
 
 ### Slide 4: Evaluation of the 6 Attack Vectors (CIA Triad)
 * **Suggested Time:** 2 minutes.
-* **Slide Contents:** Confidentiality (V1, V2), Integrity (V4, V5, V6), Availability (V3).
+* **Slide Contents:** Confidentiality (V1, V2), Integrity (V4, V5, V6), Availability (V3), and embedded chart of **Figure 3** (Spatial DoS Algorithmic Complexity Curve).
 * **Key Talking Points per Vector:**
   * **Confidentiality:**
     * **V1 (Spatial Logic Bypass in `ST_DWithin`):** Injected tautology `50) OR (1=1` breaks the distance and territorial sector boundary, exfiltrating 50 restricted parcels in 7.03 ms.
@@ -118,25 +118,47 @@ PostGIS extends PostgreSQL with spatial data types and topological operators com
     * **V5 (Cartographic Deletion):** Injected `WHERE 1=1` clause wipes all 487 lot geometries from `tg_lote`, crashing the municipal map viewer.
     * **V6 (Authentication Bypass):** SQL comment injection (`admin' --`) yields immediate privilege escalation to `superadmin_catastro`.
 
+* **Live Chart Interpretation (Figure 3: Spatial DoS Algorithmic Complexity Curve):**
+  * *Reading the Axes:* The **X-axis** indicates pairwise geometric vertices evaluated in the Cartesian cross-join (scaling up to ~9,600 vertices across 400 evaluated parcel pairs). The **Y-axis** reflects PostGIS/GEOS execution latency in milliseconds (ms).
+  * *The Red Curve (Vulnerable API):* Exhibits a classic quadratic ($O(N^2)$) execution spike. As `quad_segs` increases from 1 to 24 in `ST_Buffer`, the underlying C/C++ **GEOS** engine must compare edges pairwise without spatial index (GiST) acceleration, causing latency to surge from 10.8 ms to **1,692.1 ms (a 93.5x or ~9,700% degradation)**.
+  * *The Green Line (Mitigated Architecture):* Stays perfectly flat at a constant **~15 ms** (bounded $O(1)$ complexity). This proves that Pydantic input bounds clamping and GeoAlchemy2 subquery decoupling eliminate the algorithmic explosion before consuming database CPU.
+  * *Key Takeaway for the Jury:* *"This empirical curve validates the Crosby & Wallach principle: an adversary does not need a massive distributed botnet to take down a municipal geoportal; a single malicious query triggering worst-case algorithmic complexity is sufficient to lock up database workers."*
+
 ---
 
 ### Slide 5: Attack Mitigation Barriers
 * **Suggested Time:** 1 minute 30 seconds.
-* **Slide Contents:** Three-tier defense: Pydantic, Shapely, GeoAlchemy2 / SQLAlchemy.
+* **Slide Contents:** Three-tier defense (Pydantic, Shapely, GeoAlchemy2) and the architectural workflow diagram of **Figure 1**.
 * **Key Talking Points (Application-Layer Defense-in-Depth):**
   * **Barrier 1 (Web Layer - Pydantic):** Strict runtime scalar type enforcement, physical coordinate bounds checking, and alphanumeric regex guards. Rejects malicious inputs with `HTTP 422 Unprocessable Entity` before invoking the database.
   * **Barrier 2 (Domain Layer - In-Memory Shapely):** Pre-execution topological validation for WKT/GeoJSON payloads. Rejects self-intersecting or degenerated polygons directly in RAM.
   * **Barrier 3 (Persistence Layer - GeoAlchemy2 + SQLAlchemy):** Native geometry compilation into **EWKB** binary bind variables and mandatory **prepared statements**. Ensures absolute mathematical separation between SQL code and user data.
 
+* **Live Diagram Interpretation (Figure 1: Defense-in-Depth Pipeline Architecture):**
+  * *Reading the Flow:* Follow the 4-stage sequential pipeline left-to-right: `HTTP Client Request` $\rightarrow$ `Barrier 1 (Pydantic)` $\rightarrow$ `Barrier 2 (Shapely)` $\rightarrow$ `Barrier 3 (GeoAlchemy2)` $\rightarrow$ `PostGIS Engine`.
+  * *Architectural Design Principles (Fail-Fast & Least Privilege):*
+    1. **Perimeter Guard (Pydantic):** Blocks malicious payloads at the HTTP gateway. If an attacker injects `'50) OR (1=1'`, the 422 validation error terminates the lifecycle in 1 ms without hitting the database, saving CPU and RAM.
+    2. **Domain Guard (Shapely):** The database engine should not serve as an in-line geometric validator. Checking polygon validity (`is_valid`) in server RAM prevents low-level GEOS/C exceptions inside PostgreSQL.
+    3. **Persistence Guard (GeoAlchemy2):** By compiling queries via SQLAlchemy's Abstract Syntax Tree (AST) and serializing to EWKB binaries with prepared statements, parameters travel over PostgreSQL's binary protocol purely as data, rendering SQL grammar manipulation mathematically impossible.
+
 ---
 
 ### Slide 6: Results and Performance
 * **Suggested Time:** 1 minute 30 seconds.
-* **Slide Contents:** 100% security effectiveness, +2.63 ms operational overhead (19.89 ms vs. 17.26 ms), -12.59% improvement in p99 tail latency.
+* **Slide Contents:** Summary metric cards, comparative performance table, and the two-panel empirical chart of **Figure 2**.
 * **Key Talking Points:**
   1. *Total Effectiveness:* The pipeline achieved a **100% neutralization rate across all 6 evaluated vectors** (zero CIA triad compromises).
   2. *Negligible Overhead (+2.63 ms):* Mean query latency increased from 17.26 ms to 19.89 ms (+15.24%), sustaining a high throughput of **484 requests/sec**. An added 2.6 ms is completely imperceptible to end users.
   3. *Tail Latency Improvement (-12.59% at p99):* The 99th percentile latency dropped from 43.75 ms to 38.24 ms. This stability gain occurs because PostgreSQL reuses compiled execution plans (*prepared statements*) instead of repeatedly re-parsing raw SQL strings.
+
+* **Live Chart Interpretation (Figure 2: Concurrency & Latency Curves):**
+  * **Panel (a) - Throughput (req/s) vs. Concurrency Level (1 to 100 concurrent clients):**
+    * *Curve Behavior:* The red curve (vulnerable API) saturates at **556.21 req/s** at 50 clients. The green curve (mitigated API) reaches saturation at **484.36 req/s**.
+    * *Demonstrated Trade-off:* The throughput penalty is merely **12.9%**. For a municipal land information system, this minor overhead is fully justified to achieve 100% architectural immunity against data exfiltration and fiscal fraud.
+  * **Panel (b) - Latency Percentiles ($p_{50}$ and $p_{99}$) vs. Concurrency Level:**
+    * *Median Behavior ($p_{50}$):* Under normal operating conditions (1 to 25 clients), median latency curves are virtually indistinguishable, exhibiting only a **+2.63 ms** difference.
+    * *The Key Research Finding (Tail Latency $p_{99}$):* Notice that under heavy concurrency (100 threads), the green dashed line (mitigated $p_{99}$) drops **BELOW** the red dotted line (vulnerable $p_{99}$).
+    * *Technical Justification for the Jury:* Worst-case tail latency is reduced by **12.59%** (from 38.4 ms down to 33.6 ms). This occurs because GeoAlchemy2's prepared statements allow PostgreSQL to reuse cached execution plans in session memory. In contrast, the vulnerable API's dynamic string concatenation forces the database query planner to lexically re-parse, re-analyze, and re-optimize every single concurrent query, congesting the engine's main thread.
 
 ---
 

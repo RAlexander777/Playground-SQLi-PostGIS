@@ -106,7 +106,7 @@ PostGIS extiende PostgreSQL añadiendo tipos geométricos y operadores conformes
 
 ### Diapositiva 4: Evaluación de los 6 Vectores de Ataque (Tríada CIA)
 * **Tiempo sugerido:** 2 minutos.
-* **Contenido en lámina:** Confidencialidad (V1, V2), Integridad (V4, V5, V6), Disponibilidad (V3).
+* **Contenido en lámina:** Confidencialidad (V1, V2), Integridad (V4, V5, V6), Disponibilidad (V3), e imagen de la **Figura 3** (Curva de Complejidad en DoS Espacial).
 * **Argumentación clave por vector:**
   * **Confidencialidad:**
     * **V1 (Evasión Lógica en `ST_DWithin`):** Inyección de tautología `50) OR (1=1` que anula el límite métrico y el sector; exfiltra 50 predios restringidos en 7.03 ms.
@@ -118,25 +118,47 @@ PostGIS extiende PostgreSQL añadiendo tipos geométricos y operadores conformes
     * **V5 (Borrado Cartográfico):** Sentencia `WHERE 1=1` inyectada; purga los 487 lotes de `tg_lote`, destruyendo la cartografía del visor.
     * **V6 (Bypass de Autenticación):** Truncamiento SQL mediante comentarios (`admin' --`); escalación ilegítima a `superadmin_catastro`.
 
+* **Interpretación de la Gráfica en Pantalla (Figura 3: Curva de DoS Espacial):**
+  * *Cómo leer los ejes:* El **Eje X** representa los vértices evaluados en el producto cartesiano entre pares de geometrías (escalando hasta ~9,600 vértices resultantes de los 400 pares evaluados). El **Eje Y** muestra el tiempo de ejecución del motor en milisegundos (ms).
+  * *La Curva Roja (API Vulnerable):* Muestra un despegue no lineal cuadrático ($O(N^2)$). A medida que `quad_segs` aumenta de 1 a 24 en `ST_Buffer`, la biblioteca C/C++ **GEOS** tiene que verificar intersecciones arista por arista sin poder utilizar el índice espacial GiST, elevando la latencia de 10.8 ms a **1,692.1 ms (degradación masiva de 93.5x o ~9,700%)**.
+  * *La Línea Verde (API Mitigada):* Se mantiene perfectamente horizontal y constante en **~15 ms** (complejidad $O(1)$ acotada). Esto prueba que la validación perimetral con Pydantic y el desacoplamiento en GeoAlchemy2 anulan la explosión algorítmica antes de consumir CPU de la base de datos.
+  * *Frase de impacto para el jurado:* *"Esta curva comprueba empíricamente el principio de Crosby & Wallach: no hace falta un ataque volumétrico masivo distribuido para tumbar un geoportal municipal; basta una sola consulta maliciosa que active el peor caso asintótico del motor geométrico."*
+
 ---
 
 ### Diapositiva 5: Barreras de Mitigación de Ataques
 * **Tiempo sugerido:** 1 minuto 30 segundos.
-* **Contenido en lámina:** Tres barreras: Pydantic, Shapely, GeoAlchemy2 / SQLAlchemy.
+* **Contenido en lámina:** Tres barreras (Pydantic, Shapely, GeoAlchemy2) y el diagrama de flujo arquitectónico de la **Figura 1**.
 * **Argumentación clave (Defensa en Profundidad en Capa de Software):**
   * **Barrera 1 (Capa Web - Pydantic):** Valida tipos escalares estrictos en tiempo de ejecución, impone límites físicos de coordenadas y aplica expresiones regulares. Rechaza entradas maliciosas con código `HTTP 422` antes de tocar la base de datos.
   * **Barrera 2 (Capa Dominio - Shapely en memoria):** Inspección topológica anticipada de geometrías (WKT/GeoJSON). Detecta polígonos que se auto-cruzan o geometrías degeneradas y las descarta en memoria.
   * **Barrera 3 (Capa Persistencia - GeoAlchemy2 + SQLAlchemy):** Compilación nativa de geometrías al formato binario **EWKB** y uso mandatorio de **sentencias preparadas** (*prepared statements*). Garantiza la separación absoluta entre el código SQL y los datos.
 
+* **Interpretación del Diagrama en Pantalla (Figura 1: Pipeline de Defensa en Profundidad):**
+  * *Cómo leer el flujo:* Se lee secuencialmente de izquierda a derecha en 4 etapas: `Petición HTTP` $\rightarrow$ `Barrera 1 (Pydantic)` $\rightarrow$ `Barrera 2 (Shapely)` $\rightarrow$ `Barrera 3 (GeoAlchemy2)` $\rightarrow$ `Motor PostGIS`.
+  * *Principio de Diseño (Fail-Fast y Mínimo Privilegio Computacional):*
+    1. **Filtro Perimetral (Pydantic):** Detiene el ataque en la capa HTTP. Si un atacante inyecta `'50) OR (1=1'`, el error 422 corta el ciclo de vida en 1 ms. La base de datos nunca se entera, preservando memoria y CPU.
+    2. **Filtro de Dominio (Shapely):** La base de datos no debe ser el validador topológico. Evaluar geometrías corruptas en la RAM de Python evita que PostGIS lance excepciones de bajo nivel en el motor en C.
+    3. **Filtro de Persistencia (GeoAlchemy2):** Al usar el Árbol de Sintaxis Abstracta (AST) y serializar a binario EWKB con sentencias preparadas, los parámetros viajan por el protocolo binario de PostgreSQL como datos puros, haciendo matemáticamente imposible la alteración de la gramática SQL.
+
 ---
 
 ### Diapositiva 6: Resultados y Rendimiento
 * **Tiempo sugerido:** 1 minuto 30 segundos.
-* **Contenido en lámina:** 100% efectividad de seguridad, +2.63 ms sobrecosto operativo (19.89 ms vs. 17.26 ms), -12.59% mejora en p99.
+* **Contenido en lámina:** Métricas de seguridad y sobrecosto, tabla comparativa de rendimiento y el gráfico experimental de 2 paneles de la **Figura 2**.
 * **Argumentación clave:**
   1. *Eficacia Total:* El pipeline neutralizó el **100% de los 6 vectores evaluados** (cero brechas en la Tríada CIA).
   2. *Sobrecosto Mínimo (+2.63 ms):* La latencia media pasa de 17.26 ms a 19.89 ms (+15.24%), manteniendo un rendimiento de **484 req/s**. Este incremento de 2.6 milisegundos es completamente imperceptible para usuarios de geoportales y sistemas administrativos.
   3. *Mejora de Cola p99 (-12.59%):* La latencia en el percentil 99 bajó de 43.75 ms a 38.24 ms. Esto se debe a que PostgreSQL reutiliza los planes de ejecución compilados (*prepared statements*) en lugar de tener que analizar sintácticamente consultas de texto una y otra vez.
+
+* **Interpretación de los Gráficos en Pantalla (Figura 2: Curvas de Concurrencia y Percentiles):**
+  * **Panel (a) - Throughput (req/s) vs Concurrencia (1 a 100 clientes concurrentes):**
+    * *Lectura de curvas:* La curva roja (API vulnerable) alcanza un techo de saturación en **556.21 req/s** a los 50 clientes. La curva verde (API mitigada) satura en **484.36 req/s**.
+    * *Trade-off demostrado:* La penalización en capacidad de procesamiento es de apenas **12.9%**. Para un sistema de catastro municipal, este costo es irrelevante frente al beneficio crítico de alcanzar el 100% de blindaje ante fugas de información o fraude tributario.
+  * **Panel (b) - Percentiles de Latencia ($p_{50}$ y $p_{99}$) vs Concurrencia:**
+    * *Comportamiento de la Mediana ($p_{50}$):* En cargas normales (1 a 25 clientes), ambas curvas de mediana ($p_{50}$) son prácticamente idénticas, con una diferencia media de solo **+2.63 ms**.
+    * *El Hallazgo Clave de la Investigación (Latencia de Cola $p_{99}$):* Obsérvese que al llegar a saturación severa (100 hilos concurrentes), la curva verde segmentada de la API mitigada se sitúa **POR DEBAJO** de la curva roja de la API vulnerable.
+    * *Explicación técnica para el jurado:* La latencia en el percentil 99 de peor caso se reduce un **12.59%** (de 38.4 ms a 33.6 ms). Esto se produce porque las sentencias preparadas de GeoAlchemy2 permiten a PostgreSQL reutilizar el plan de ejecución precompilado en memoria de sesión, mientras que la API vulnerable con SQL dinámico obliga al planificador de PostgreSQL a re-analizar el texto de la consulta en cada llamada concurrente, congestionando el hilo principal del motor.
 
 ---
 
