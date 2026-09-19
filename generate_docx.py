@@ -256,7 +256,8 @@ def create_imjeta_doc():
         "PostgreSQL 15 y PostGIS 3.3, (2) una API en Python 3.11 con FastAPI y Uvicorn, y (3) un proxy reverso Nginx configurado con el "
         "módulo ModSecurity v3 y el conjunto de reglas perimetrales OWASP Core Rule Set (CRS v3.3). Las pruebas de estrés se ejecutaron en "
         "un entorno controlado con un procesador Intel Core Ultra 5 245KF de 14 núcleos a 5.2 GHz con 32 GB de RAM DDR5 y almacenamiento "
-        "NVMe PCIe 4.0 sobre Linux kernel 6.6 (WSL2)."
+        "NVMe PCIe 4.0 sobre Linux kernel 6.6 (WSL2). El código fuente, dataset y playground interactivo se encuentran disponibles "
+        "públicamente en: https://github.com/RAlexander777/Playground-SQLi-PostGIS."
     )
 
     add_heading_2("3.4. Vectores de Prueba y Métricas de Rendimiento")
