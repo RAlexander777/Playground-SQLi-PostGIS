@@ -210,7 +210,7 @@
       background: var(--primary-light);
     }
 
-    /* Inspector y Monospace Terminal */
+    /* Inspector y Monospace Terminal / Editor */
     .code-inspector {
       background: #0f172a;
       color: #e2e8f0;
@@ -222,6 +222,26 @@
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
+    }
+    .code-editor-input {
+      background: #0f172a;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.80rem;
+      width: 100%;
+      min-height: 115px;
+      resize: vertical;
+      white-space: pre;
+      line-height: 1.45;
+      outline: none;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .code-editor-input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
     }
 
     /* Tablas */
@@ -453,8 +473,38 @@
           <span id="badgeVerdict" class="badge bg-secondary font-mono" style="font-size: 0.7rem;">EN ESPERA</span>
         </div>
 
-        <!-- Terminal de Consulta -->
-        <div class="code-inspector mb-2" id="boxQuery">-- Selecciona un vector o realiza una búsqueda para inspeccionar la consulta generada --</div>
+        <!-- Terminal / Consola SQL Editable -->
+        <div class="mb-2">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-secondary font-mono" style="font-size: 0.70rem;">
+              <i class="fa-solid fa-code me-1"></i> <span id="txtEditorLabel">Consola SQL Editable (Crea o modifica ataques custom):</span>
+            </span>
+            <div class="d-flex gap-1">
+              <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" style="font-size: 0.65rem;" onclick="restaurarConsultaOriginal()" id="btnResetSql" title="Restaura la consulta original del vector">
+                <i class="fa-solid fa-arrow-rotate-left me-1"></i> <span id="txtBtnResetSql">Restaurar</span>
+              </button>
+              <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" style="font-size: 0.65rem;" onclick="limpiarEditorSql()" id="btnClearSql" title="Limpia la consola">
+                <i class="fa-solid fa-eraser me-1"></i> <span id="txtBtnClearSql">Limpiar</span>
+              </button>
+            </div>
+          </div>
+          <textarea class="code-editor-input mb-1 font-mono" id="boxQuery" rows="4" spellcheck="false"
+                    placeholder="-- Selecciona un vector de la derecha o escribe tu consulta SQL / payload aquí para lanzar un ataque custom --"></textarea>
+          
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-1">
+            <div class="d-flex flex-wrap gap-1 align-items-center">
+              <span class="text-secondary font-mono" style="font-size: 0.65rem;" id="txtCustomPresets">Plantillas Custom:</span>
+              <button class="btn btn-xs btn-light border font-mono py-0 px-1 text-danger" style="font-size: 0.65rem;" onclick="cargarTemplateSql('bypass')" title="Bypass espacial con ST_DWithin">Bypass</button>
+              <button class="btn btn-xs btn-light border font-mono py-0 px-1 text-danger" style="font-size: 0.65rem;" onclick="cargarTemplateSql('dos')" title="DoS con ST_Buffer y quad_segs">Buffer DoS</button>
+              <button class="btn btn-xs btn-light border font-mono py-0 px-1 text-warning" style="font-size: 0.65rem;" onclick="cargarTemplateSql('tamper')" title="Manipulación de autovalúo y titular">Tampering</button>
+              <button class="btn btn-xs btn-light border font-mono py-0 px-1 text-danger" style="font-size: 0.65rem;" onclick="cargarTemplateSql('purge')" title="Borrado de sector catastral">Purga</button>
+              <button class="btn btn-xs btn-light border font-mono py-0 px-1 text-warning" style="font-size: 0.65rem;" onclick="cargarTemplateSql('union')" title="Exfiltración UNION de contraseñas">UNION</button>
+            </div>
+            <button class="btn btn-sm btn-danger font-mono py-1 px-3 shadow-sm fw-bold" onclick="ejecutarAtaqueCustom()" id="btnExecuteCustom" style="font-size: 0.75rem;">
+              <i class="fa-solid fa-bolt me-1"></i> <span id="txtBtnExecuteCustom">Ejecutar Ataque SQL Custom</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Métricas Rápidas -->
         <div class="row g-2 mb-2 font-mono" style="font-size: 0.75rem;">
@@ -678,7 +728,13 @@
         thLadmId: "ID LOTE",
         thLadmDni: "DNI",
         thLadmTitular: "TITULAR PREDIAL",
-        thLadmAuto: "AUTOVALÚO"
+        thLadmAuto: "AUTOVALÚO",
+        editorLabel: "Consola SQL Editable (Crea o modifica ataques custom):",
+        btnResetSql: "Restaurar",
+        btnClearSql: "Limpiar",
+        customPresets: "Plantillas Custom:",
+        btnExecuteCustom: "Ejecutar Ataque SQL Custom",
+        editorPlaceholder: "-- Selecciona un vector de la derecha o escribe tu consulta SQL / payload aquí para lanzar un ataque custom --"
       },
       en: {
         tagLotes: "Parcels:",
@@ -746,7 +802,13 @@
         thLadmId: "PARCEL ID",
         thLadmDni: "ID DOC",
         thLadmTitular: "PARCEL OWNER",
-        thLadmAuto: "VALUATION"
+        thLadmAuto: "VALUATION",
+        editorLabel: "Editable SQL Console (Create or modify custom attacks):",
+        btnResetSql: "Reset",
+        btnClearSql: "Clear",
+        customPresets: "Custom Presets:",
+        btnExecuteCustom: "Run Custom SQL Attack",
+        editorPlaceholder: "-- Select an attack vector on the right or type your SQL query / payload here to launch a custom attack --"
       }
     };
 
@@ -799,10 +861,17 @@
       document.getElementById('btnCenterMap').innerHTML = `<i class="fa-solid fa-expand me-1"></i> ${t.centerBtn}`;
       document.getElementById('txtMapLegend').innerHTML = t.mapLegend;
 
-      // Inspector
+      // Inspector & Console
       document.getElementById('txtInspectorTitle').textContent = t.inspectorTitle;
       document.getElementById('txtMetricLat').textContent = t.metricLat;
       document.getElementById('txtMetricHttp').textContent = t.metricHttp;
+      document.getElementById('txtMetricDef').textContent = t.metricDef;
+      document.getElementById('txtEditorLabel').textContent = t.editorLabel;
+      document.getElementById('txtBtnResetSql').textContent = t.btnResetSql;
+      document.getElementById('txtBtnClearSql').textContent = t.btnClearSql;
+      document.getElementById('txtCustomPresets').textContent = t.customPresets;
+      document.getElementById('txtBtnExecuteCustom').textContent = t.btnExecuteCustom;
+      document.getElementById('boxQuery').placeholder = t.editorPlaceholder;
       document.getElementById('txtMetricDef').textContent = t.metricDef;
 
       // Threats
@@ -1597,10 +1666,191 @@
       if (active) active.classList.add('active-target');
     }
 
+    // ==========================================
+    // CONSOLA SQL INTERACTIVA & ATAQUES CUSTOM
+    // ==========================================
+    let originalQueryTemplate = '';
+
+    function setBoxQueryValue(text) {
+      const el = document.getElementById('boxQuery');
+      if (el) {
+        if (el.tagName === 'TEXTAREA') {
+          el.value = text;
+        } else {
+          el.textContent = text;
+        }
+      }
+    }
+
+    function cargarTemplateSql(tipo) {
+      let sql = '';
+      switch (tipo) {
+        case 'bypass':
+          sql = `SELECT id_lote, cod_sector, area_grafica, tipo_suelo, \n       ST_AsGeoJSON(ST_Transform(objcad_lote_gemo, 4326)) as geojson\nFROM tg_lote\nWHERE cod_sector = '0101' OR ST_DWithin(objcad_lote_gemo, ST_SetSRID(ST_MakePoint(389840.8, 8248727.8), 32719), 5000)\nLIMIT 50;`;
+          break;
+        case 'dos':
+          sql = `SELECT id_lote, ST_Area(ST_Buffer(objcad_lote_gemo, 100, 'quad_segs=40')) as area_buffer\nFROM tg_lote\nWHERE cod_sector = '0101'\nLIMIT 20;`;
+          break;
+        case 'tamper':
+          sql = `UPDATE catastro_titulares \nSET autovaluo_soles = 0.00, nombre_completo = 'ATTACKER_CUSTOM_OVERRIDE'\nWHERE id_lote LIKE '%0101%';`;
+          break;
+        case 'purge':
+          sql = `DELETE FROM tg_lote \nWHERE cod_sector = '0101' OR '1'='1';`;
+          break;
+        case 'union':
+          sql = `SELECT l.id_lote, l.cod_sector, l.tipo_suelo, t.nombre_completo as titular, t.autovaluo_soles as autovaluo \nFROM tg_lote l \nLEFT JOIN catastro_titulares t ON l.id_lote = t.id_lote\nUNION\nSELECT username, role, 'EXFILTRADO', password_hash, 0 FROM catastro_usuarios\nLIMIT 25;`;
+          break;
+        default:
+          sql = `SELECT id_lote, cod_sector, tipo_suelo, ST_AsGeoJSON(ST_Transform(objcad_lote_gemo, 4326)) as geojson FROM tg_lote LIMIT 15;`;
+      }
+      setBoxQueryValue(sql);
+      originalQueryTemplate = sql;
+      setInspectorData(
+        currentLang === 'es' ? 'Plantilla SQL Cargada' : 'SQL Template Loaded',
+        sql,
+        0,
+        200,
+        '⚡ EDITABLE',
+        currentLang === 'es' ? 'Modifica los parámetros o presiona "Ejecutar Ataque SQL Custom" para lanzar la consulta.' : 'Modify parameters or click "Run Custom SQL Attack" to dispatch the query.'
+      );
+    }
+
+    function restaurarConsultaOriginal() {
+      if (originalQueryTemplate) {
+        setBoxQueryValue(originalQueryTemplate);
+      }
+    }
+
+    function limpiarEditorSql() {
+      setBoxQueryValue('');
+      document.getElementById('lblLatency').textContent = '- ms';
+      document.getElementById('lblHttpCode').textContent = '-';
+      document.getElementById('badgeVerdict').className = 'badge bg-secondary font-mono';
+      document.getElementById('badgeVerdict').textContent = currentLang === 'es' ? 'EN ESPERA' : 'STANDBY';
+    }
+
+    async function ejecutarAtaqueCustom() {
+      const el = document.getElementById('boxQuery');
+      const query = (el.value || el.textContent || '').trim();
+
+      if (!query || query.startsWith('--')) {
+        alert(currentLang === 'es'
+          ? "Escribe o modifica una consulta SQL válida antes de ejecutar."
+          : "Write or edit a valid SQL query before executing.");
+        return;
+      }
+
+      setLoadingState(currentLang === 'es' ? "Ejecutando consulta SQL personalizada..." : "Executing custom SQL query...");
+      const start = performance.now();
+      const url = `${API_BASE}/${activeMode}/custom-sql`;
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query })
+        });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          if (res.status === 200 && json.status === "success") {
+            updatePipelineDisplay(
+              { state: 'bypassed', label: 'BYPASS' },
+              { state: 'bypassed', label: 'N/A' },
+              { state: 'bypassed', label: 'SQL DINÁMICO EJECUTADO' },
+              'Ninguna (SQL Crudo Directo)'
+            );
+
+            let detailsMsg = '';
+            if (json.tipo_operacion === 'SELECT') {
+              detailsMsg = currentLang === 'es'
+                ? `Consulta ejecutada en crudo. Retornó ${json.total_registros} registros.`
+                : `Raw query executed. Returned ${json.total_registros} records.`;
+
+              if (json.geojson && json.geojson.features && json.geojson.features.length > 0) {
+                renderGeojsonOnMap(json.geojson, '#dc2626', true);
+                detailsMsg += currentLang === 'es'
+                  ? ` Se proyectaron ${json.geojson.features.length} geometrías en rojo en el mapa.`
+                  : ` Rendered ${json.geojson.features.length} geometries in red on the map.`;
+              }
+            } else {
+              detailsMsg = currentLang === 'es'
+                ? `Operación DML/DDL ejecutada. Filas afectadas: ${json.filas_afectadas}. Quedan ${json.lotes_restantes} lotes en base de datos.`
+                : `DML/DDL executed. Affected rows: ${json.filas_afectadas}. Remaining parcels: ${json.lotes_restantes}.`;
+              await loadStats();
+            }
+
+            setInspectorData(
+              currentLang === 'es' ? 'Ataque Custom Ejecutado (Vulnerable)' : 'Custom Attack Executed (Vulnerable)',
+              query,
+              duration,
+              res.status,
+              '⚠️ SQL DIRECTO',
+              detailsMsg
+            );
+          } else {
+            const errMsg = (json.detail && (json.detail.database_error || json.detail.error)) || (typeof json.detail === 'string' ? json.detail : JSON.stringify(json));
+            updatePipelineDisplay(
+              { state: 'bypassed', label: 'BYPASS' },
+              { state: 'bypassed', label: 'EXCEPCIÓN' },
+              { state: 'bypassed', label: 'ERROR POSTGIS' },
+              'Ninguna (Excepción PostGIS / GEOS)'
+            );
+            setInspectorData(
+              currentLang === 'es' ? 'Excepción PostGIS (Canal Lateral)' : 'PostGIS Exception (Side Channel)',
+              query,
+              duration,
+              res.status,
+              '⚠️ ERROR 500',
+              `${currentLang === 'es' ? 'El motor PostGIS arrojó una excepción ante la consulta:' : 'PostGIS engine raised an exception:'} <code>${errMsg}</code>`
+            );
+          }
+        } else {
+          // Modo Mitigado
+          if (res.status === 422) {
+            updatePipelineDisplay(
+              { state: 'blocked', label: 'RECHAZADO (422)' },
+              { state: 'standby', label: 'STANDBY' },
+              { state: 'standby', label: 'PROTEGIDO' },
+              json.detail?.barrera_activa || 'Barrera 1: Pydantic / Gateway'
+            );
+            setInspectorData(
+              currentLang === 'es' ? 'Ataque Custom Interceptado' : 'Custom Attack Blocked',
+              query,
+              duration,
+              422,
+              '🛡️ BLOQUEO DEFENSIVO',
+              json.detail?.motivo || (currentLang === 'es' ? 'La arquitectura mitigada prohibió la ejecución de SQL dinámico sin parametrizar.' : 'Mitigated architecture blocked unparameterized dynamic SQL.')
+            );
+          } else if (res.status === 200) {
+            updatePipelineDisplay(
+              { state: 'passed', label: 'VALIDADO' },
+              { state: 'passed', label: 'N/A' },
+              { state: 'passed', label: 'PARAMETRIZADO' },
+              'Barrera 3: GeoAlchemy2 ORM'
+            );
+            setInspectorData(
+              currentLang === 'es' ? 'Consulta Segura Procesada' : 'Safe Query Processed',
+              query,
+              duration,
+              200,
+              '🛡️ EJECUCIÓN SEGURA',
+              currentLang === 'es' ? `Consulta de solo lectura ejecutada bajo parámetros controlados (${json.total_registros} filas).` : `Read-only query executed with controlled parameters (${json.total_registros} rows).`
+            );
+          } else {
+            showError(json);
+          }
+        }
+      } catch (err) {
+        showError(err);
+      }
+    }
+
     function setLoadingState(msg) {
       document.getElementById('badgeVerdict').className = 'badge bg-warning text-dark font-mono';
       document.getElementById('badgeVerdict').textContent = 'PROCESANDO...';
-      document.getElementById('boxQuery').textContent = `-- ${msg} --`;
+      setBoxQueryValue(`-- ${msg} --`);
     }
 
     function setInspectorData(headerTitle, queryText, latency, httpCode, verdictTitle, explanation) {
@@ -1614,7 +1864,8 @@
       }
       badge.textContent = verdictTitle;
 
-      document.getElementById('boxQuery').textContent = queryText;
+      originalQueryTemplate = queryText;
+      setBoxQueryValue(queryText);
       document.getElementById('lblLatency').textContent = `${latency} ms`;
       document.getElementById('pipelineLatency').textContent = `Latencia: ${latency} ms`;
       document.getElementById('lblHttpCode').textContent = `HTTP ${httpCode}`;
@@ -1628,7 +1879,7 @@
     function showError(err) {
       document.getElementById('badgeVerdict').className = 'badge bg-danger font-mono';
       document.getElementById('badgeVerdict').textContent = 'ERROR';
-      document.getElementById('boxQuery').textContent = typeof err === 'object' ? JSON.stringify(err, null, 2) : err.toString();
+      setBoxQueryValue(typeof err === 'object' ? JSON.stringify(err, null, 2) : err.toString());
     }
 
     window.addEventListener('DOMContentLoaded', () => {

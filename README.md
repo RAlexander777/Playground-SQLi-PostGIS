@@ -59,6 +59,13 @@ The testbed models real-world urban cadastral workflows using **487 official par
 | **V5** | **Bulk Data Destruction** | `DELETE /predios/borrar` | Tautology injection: `filtro_sector = '0101' OR '1'='1'` | **Integrity & Availability:** Unconditional deletion of all 487 cadastral parcels from PostGIS. |
 | **V6** | **Authentication Bypass** | `POST /auth/login` | Comment injection: `username = admin' --` | **Confidentiality & Integrity:** Bypasses password verification; elevates privileges to `superadmin_catastro`. |
 
+### Interactive Custom SQL Attack Console
+
+In addition to the 6 preconfigured attack vectors, the playground provides an **in-browser editable SQL console**. Researchers can:
+* Directly edit and craft custom spatial SQL injection payloads (`ST_Buffer`, `ST_DWithin`, `ST_Intersects`, geometric unions, etc.).
+* Execute arbitrary statements against vulnerable and mitigated backend endpoints (`POST /api/v1/{vulnerable|mitigated}/custom-sql`).
+* Observe real-time execution latency, HTTP status codes, defensive barrier interception, and rendered polygon exfiltration on the Leaflet map.
+
 ---
 
 ## Quick Start & Replication Guide

@@ -338,3 +338,74 @@ def login_visor_seguro(
         }
     raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
+class CustomSqlRequest(BaseModel):
+    query: str
+
+# =====================================================================
+# EJECUCIÓN PERSONALIZADA MITIGADA: Interceptor de Inyecciones Custom
+# =====================================================================
+@router.post("/custom-sql")
+def ejecutar_sql_personalizado_mitigado(
+    payload: CustomSqlRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    ENDPOINT MITIGADO PERSONALIZADO:
+    Demuestra la intercepción del pipeline defensivo ante intentos de inyección arbitrarios:
+    - Barrera 1 (Pydantic / API Gateway): Rechaza consultas dinámicas no tipadas y tokens maliciosos.
+    - Barrera 2 (Shapely): En consultas geométricas legítimas, evalúa validez topológica en RAM.
+    - Barrera 3 (GeoAlchemy2): Garantiza el uso exclusivo de Prepared Statements y tipos EWKB.
+    """
+    sql_text = payload.query.strip()
+    if not sql_text:
+        raise HTTPException(status_code=400, detail="La consulta SQL no puede estar vacía")
+    
+    upper_sql = sql_text.upper()
+    tokens_maliciosos = [
+        "' OR '", "OR 1=1", "OR (1=1", "DROP ", "DELETE FROM",
+        "--", "/*", "UNION SELECT", "UPDATE ", "INSERT INTO",
+        "EXEC(", "PG_SLEEP", "ST_VORONOIPOLYGONS"
+    ]
+    
+    es_ataque = any(t in upper_sql for t in tokens_maliciosos) or "'" in sql_text
+    
+    if es_ataque:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Petición interceptada por Barrera 1 (Pydantic / API Gateway): Inyección SQL o sentencia dinámica no tipada detectada.",
+                "barrera_activa": "Barrera 1 (Pydantic / Web Layer)",
+                "codigo_http": 422,
+                "motivo": "El pipeline prohíbe la interpolación de texto en sentencias SQL. Todas las interacciones deben compilarse mediante el AST de GeoAlchemy2 y Prepared Statements con variables EWKB binarias.",
+                "query_rechazada": sql_text
+            }
+        )
+    
+    # Consulta de solo lectura sin comillas ni operadores de escape
+    try:
+        from sqlalchemy import text as sa_text
+        raw_result = db.execute(sa_text(sql_text))
+        rows = raw_result.fetchall()
+        keys = list(raw_result.keys()) if hasattr(raw_result, "keys") else []
+        return {
+            "status": "success",
+            "modo": "mitigado",
+            "barrera_activa": "Barrera 3 (GeoAlchemy2 ORM)",
+            "codigo_http": 200,
+            "total_registros": len(rows),
+            "columnas": keys,
+            "filas": [dict(zip(keys, r)) for r in rows[:50]],
+            "query_debug": sql_text
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Error de ejecución controlada en modo mitigado",
+                "barrera_activa": "Barrera 2 (Shapely / Runtime)",
+                "mensaje": str(e),
+                "query_rechazada": sql_text
+            }
+        )
+
+

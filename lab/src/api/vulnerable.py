@@ -1,9 +1,14 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from src.config.database import get_db
 
 router = APIRouter(prefix="/vulnerable", tags=["Laboratorio Vulnerable"])
+
+class CustomSqlRequest(BaseModel):
+    query: str
 
 # =====================================================================
 # SIMULACIÓN 1: Evasión de Límite Espacial (Spatial Logic Bypass)
@@ -266,6 +271,86 @@ def login_visor_vulnerable(
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     except HTTPException:
         raise
-    except Exception as e:
         raise HTTPException(status_code=500, detail={"error": str(e), "query": query_sql})
+
+# =====================================================================
+# EJECUCIÓN PERSONALIZADA: Consola de Ataques SQL Espaciales Arbitrarios
+# =====================================================================
+@router.post("/custom-sql")
+def ejecutar_sql_personalizado_vulnerable(
+    payload: CustomSqlRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    ENDPOINT VULNERABLE PERSONALIZADO:
+    Permite a los investigadores ejecutar cualquier consulta SQL o vector de ataque ad-hoc.
+    Ejecuta directamente el SQL en crudo sin parametrización ni sanitización.
+    """
+    sql_text = payload.query.strip()
+    if not sql_text:
+        raise HTTPException(status_code=400, detail="La consulta SQL no puede estar vacía")
+    
+    try:
+        raw_result = db.execute(text(sql_text))
+        is_select = sql_text.strip().upper().startswith("SELECT") or "RETURNING" in sql_text.strip().upper()
+        
+        if is_select:
+            rows = raw_result.fetchall()
+            keys = list(raw_result.keys()) if hasattr(raw_result, "keys") else []
+            data_rows = []
+            features = []
+            
+            for row in rows:
+                row_dict = {}
+                for idx, col_name in enumerate(keys):
+                    val = row[idx]
+                    row_dict[col_name] = val
+                    if col_name.lower() in ("geojson", "geometry", "geom") and val:
+                        try:
+                            g_json = json.loads(val) if isinstance(val, str) else val
+                            features.append({
+                                "type": "Feature",
+                                "properties": {k: v for k, v in row_dict.items() if k.lower() not in ("geojson", "geometry", "geom")},
+                                "geometry": g_json
+                            })
+                        except Exception:
+                            pass
+                data_rows.append(row_dict)
+            
+            return {
+                "status": "success",
+                "modo": "vulnerable",
+                "tipo_operacion": "SELECT",
+                "total_registros": len(data_rows),
+                "columnas": keys,
+                "filas": data_rows[:100],
+                "geojson": {"type": "FeatureCollection", "features": features} if features else None,
+                "query_debug": sql_text
+            }
+        else:
+            db.commit()
+            rowcount = raw_result.rowcount
+            remaining_lotes = db.execute(text("SELECT COUNT(*) FROM tg_lote;")).scalar()
+            remaining_titulares = db.execute(text("SELECT COUNT(*) FROM catastro_titulares;")).scalar()
+            return {
+                "status": "success",
+                "modo": "vulnerable",
+                "tipo_operacion": "DML/DDL",
+                "filas_afectadas": rowcount,
+                "lotes_restantes": remaining_lotes,
+                "titulares_restantes": remaining_titulares,
+                "query_debug": sql_text,
+                "message": f"Operación ejecutada con éxito. Filas afectadas: {rowcount}."
+            }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "database_error": str(e),
+                "query_debug": sql_text
+            }
+        )
+
 
