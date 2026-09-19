@@ -139,6 +139,69 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
 
+    .live-concat-box {
+      background-color: #0b1329;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      margin-top: 0.65rem;
+    }
+
+    .sql-code-preview {
+      background-color: #020617;
+      color: #94a3b8;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      line-height: 1.45;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .sql-kw {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .sql-str {
+      color: #a3e635;
+    }
+
+    .sql-injected-danger {
+      background: rgba(239, 68, 68, 0.22);
+      color: #fca5a5;
+      border: 1px dashed #ef4444;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .sql-injected-safe {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid #22c55e;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .sql-quote-broken {
+      background: #dc2626;
+      color: #ffffff;
+      padding: 0 4px;
+      border-radius: 3px;
+      font-weight: 800;
+    }
+
+    .sql-token-highlight {
+      color: #f59e0b;
+      font-weight: bold;
+      text-decoration: underline;
+    }
+
     /* Pipeline de 3 Barreras */
     .pipeline-wrapper {
       background: var(--bg-card);
@@ -337,6 +400,7 @@
         <div class="input-group">
           <input type="text" id="inputCriterio" class="form-control font-mono" style="font-size: 0.82rem;"
                  placeholder="Ingresa ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)..."
+                 oninput="updateLiveConcatPreview()"
                  onkeydown="if(event.key === 'Enter') ejecutarBusquedaLotes()">
           <button class="btn btn-primary px-3" onclick="ejecutarBusquedaLotes()" style="font-size: 0.82rem;" id="btnEvalSearch">
             Evaluar
@@ -356,6 +420,27 @@
           <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;%' OR 1=1 --&quot;)" id="btnPresetComment">Comentario (1=1 --)</button>
           <button class="btn btn-sm btn-light border text-warning font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' UNION SELECT username, role, 'EXFILTRADO', password_hash, 0, NULL FROM catastro_usuarios --&quot;)" id="btnPresetUnion">UNION Passwords</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 2.1 CONCATENACIÓN SQL EN VIVO DENTRO DEL PANEL DE BÚSQUEDA -->
+    <div id="divLiveConcatPreview" class="live-concat-box">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-warning fw-bold" style="font-size: 0.76rem;">
+            <i class="fa-solid fa-terminal me-1"></i> <span id="txtLiveConcatTitle">Concatenación SQL en Tiempo Real (Interpolación Backend):</span>
+          </span>
+          <span id="badgeLiveConcatMode" class="badge bg-danger font-mono" style="font-size: 0.68rem;">VULNERABLE (f-string)</span>
+        </div>
+        <span id="txtLiveConcatHint" class="text-secondary font-mono" style="font-size: 0.70rem;">
+          Escribe o haz clic en un preset para observar cómo se compila la consulta
+        </span>
+      </div>
+      <div id="boxLiveConcatQuery" class="sql-code-preview">
+        <!-- Renderizado dinámico en tiempo real -->
+      </div>
+      <div id="divLiveConcatExplanation" class="mt-1 font-mono" style="font-size: 0.72rem;">
+        <!-- Diagnóstico sintáctico en tiempo real -->
       </div>
     </div>
 
@@ -734,7 +819,11 @@
         btnClearSql: "Limpiar",
         customPresets: "Plantillas Custom:",
         btnExecuteCustom: "Ejecutar Ataque SQL Custom",
-        editorPlaceholder: "-- Selecciona un vector de la derecha o escribe tu consulta SQL / payload aquí para lanzar un ataque custom --"
+        editorPlaceholder: "-- Selecciona un vector de la derecha o escribe tu consulta SQL / payload aquí para lanzar un ataque custom --",
+        liveConcatTitle: "Concatenación SQL en Tiempo Real (Interpolación Backend):",
+        liveConcatHint: "Escribe o haz clic en un preset para observar cómo se compila la consulta",
+        liveConcatBadgeVuln: "VULNERABLE (f-string)",
+        liveConcatBadgeMit: "DEFENSA ACTIVA (Bind ORM)"
       },
       en: {
         tagLotes: "Parcels:",
@@ -808,7 +897,11 @@
         btnClearSql: "Clear",
         customPresets: "Custom Presets:",
         btnExecuteCustom: "Run Custom SQL Attack",
-        editorPlaceholder: "-- Select an attack vector on the right or type your SQL query / payload here to launch a custom attack --"
+        editorPlaceholder: "-- Select an attack vector on the right or type your SQL query / payload here to launch a custom attack --",
+        liveConcatTitle: "Real-Time SQL Concatenation (Backend Interpolation):",
+        liveConcatHint: "Type or click a preset to see how the query compiles in backend",
+        liveConcatBadgeVuln: "VULNERABLE (f-string)",
+        liveConcatBadgeMit: "ACTIVE DEFENSE (Bind ORM)"
       }
     };
 
@@ -842,6 +935,13 @@
       document.getElementById('thSTitular').textContent = t.thTitular;
       document.getElementById('thSAuto').textContent = t.thAuto;
       document.getElementById('thSAction').textContent = t.thAction;
+
+      // Live Concat Box
+      const elTitle = document.getElementById('txtLiveConcatTitle');
+      const elHint = document.getElementById('txtLiveConcatHint');
+      if (elTitle) elTitle.textContent = t.liveConcatTitle;
+      if (elHint) elHint.textContent = t.liveConcatHint;
+      if (typeof updateLiveConcatPreview === 'function') updateLiveConcatPreview();
 
       // Pipeline
       document.getElementById('txtPipelineTitle').textContent = t.pipelineTitle;
@@ -951,6 +1051,10 @@
           ? 'Las consultas SQL se concatenan como texto directo sin validación. Cualquier fragmento malicioso será ejecutado por la base de datos.'
           : 'Se activaron las 3 barreras: validación de entrada (Pydantic), chequeo geométrico en memoria (Shapely) y parámetros preparados (GeoAlchemy2).'
       );
+
+      if (typeof updateLiveConcatPreview === 'function') {
+        updateLiveConcatPreview();
+      }
     }
 
     function resetPipelineUI() {
@@ -1124,15 +1228,137 @@
     }
 
     // ==========================================
+    // VISUALIZADOR DE CONCATENACIÓN SQL EN TIEMPO REAL
+    // ==========================================
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function highlightPayloadSql(payload) {
+      if (!payload) return '<span class="text-secondary opacity-75">&lt;criterio_vacio&gt;</span>';
+      
+      let safe = escapeHtml(payload);
+      
+      // Resaltar comillas simples con clase que destaca la ruptura de cadena
+      safe = safe.replace(/'/g, '<span class="sql-quote-broken" title="Ruptura de delimitador de cadena literal">\'</span>');
+      
+      // Resaltar tokens y palabras clave SQL inyectadas
+      const keywords = ['OR', 'AND', 'UNION', 'SELECT', 'FROM', 'WHERE', 'LIMIT', 'DROP', 'INSERT', 'UPDATE', 'DELETE', 'LIKE', 'ILIKE', 'COALESCE', 'NULL'];
+      keywords.forEach(kw => {
+        const regex = new RegExp(`\\b(${kw})\\b`, 'gi');
+        safe = safe.replace(regex, '<span class="sql-token-highlight">$1</span>');
+      });
+      safe = safe.replace(/(--)/g, '<span class="sql-token-highlight" title="Comentario SQL que anula el resto">$1</span>');
+      safe = safe.replace(/(1\s*=\s*1)/gi, '<span class="sql-token-highlight fw-bold" title="Tautología booleana">$1</span>');
+
+      return `<span class="sql-injected-danger">${safe}</span>`;
+    }
+
+    function updateLiveConcatPreview() {
+      const inputElem = document.getElementById('inputCriterio');
+      const boxElem = document.getElementById('boxLiveConcatQuery');
+      const badgeElem = document.getElementById('badgeLiveConcatMode');
+      const hintElem = document.getElementById('txtLiveConcatHint');
+      const expElem = document.getElementById('divLiveConcatExplanation');
+      
+      if (!inputElem || !boxElem) return;
+
+      const rawVal = inputElem.value;
+      const isSpanish = currentLang === 'es';
+
+      if (activeMode === 'vulnerable') {
+        if (badgeElem) {
+          badgeElem.className = 'badge bg-danger font-mono';
+          badgeElem.textContent = isSpanish ? 'VULNERABLE (f-string)' : 'VULNERABLE (f-string)';
+        }
+        if (hintElem) {
+          hintElem.textContent = isSpanish 
+            ? 'Interpolación directa de cadena: evalúa la alteración sintáctica del WHERE'
+            : 'Direct string interpolation: observe syntactic alteration of WHERE clause';
+        }
+
+        const highlighted = highlightPayloadSql(rawVal);
+
+        boxElem.innerHTML = 
+`<span class="sql-kw">SELECT</span> l.id_lote, l.cod_sector, l.tipo_suelo, <span class="sql-kw">COALESCE</span>(t.nombre_completo, <span class="sql-str">'Sin Titular'</span>) <span class="sql-kw">AS</span> titular, <span class="sql-kw">COALESCE</span>(t.autovaluo_soles, 0) <span class="sql-kw">AS</span> autovaluo, <span class="sql-kw">ST_AsGeoJSON</span>(<span class="sql-kw">ST_Transform</span>(l.objcad_lote_gemo, 4326)) <span class="sql-kw">AS</span> geojson
+<span class="sql-kw">FROM</span> tg_lote l <span class="sql-kw">LEFT JOIN</span> catastro_titulares t <span class="sql-kw">ON</span> l.id_lote = t.id_lote
+<span class="sql-kw">WHERE</span> l.id_lote <span class="sql-kw">LIKE</span> <span class="sql-str">'%</span>${highlighted}<span class="sql-str">%'</span> <span class="sql-kw">OR</span> t.nombre_completo <span class="sql-kw">LIKE</span> <span class="sql-str">'%</span>${highlighted}<span class="sql-str">%'</span>
+<span class="sql-kw">LIMIT</span> 50;`;
+
+        // Diagnóstico en vivo
+        const hasQuote = rawVal.includes("'");
+        const hasTautology = /or\s+['"]?1['"]?\s*=\s*['"]?1/i.test(rawVal) || /1\s*=\s*1/i.test(rawVal);
+        const hasUnion = /union\s+select/i.test(rawVal);
+        const hasComment = rawVal.includes('--');
+
+        if (expElem) {
+          if (hasQuote && (hasTautology || hasComment || hasUnion)) {
+            expElem.innerHTML = isSpanish
+              ? `⚠️ <strong class="text-danger">¡Árbol Sintáctico (AST) Corrompido!</strong> La comilla <span class="sql-quote-broken">'</span> cerró la cadena <code>LIKE</code>. Los tokens inyectados alteraron la estructura relacional convirtiendo la condición en incondicional o exfiltrando tablas adicionales.`
+              : `⚠️ <strong class="text-danger">SQL Syntax Tree (AST) Hijacked!</strong> Single quote <span class="sql-quote-broken">'</span> prematurely closed the <code>LIKE</code> literal. Injected tokens altered the relational grammar, forcing a tautology or table exfiltration.`;
+          } else if (hasQuote) {
+            expElem.innerHTML = isSpanish
+              ? `⚠️ <strong class="text-warning">Comilla de escape detectada:</strong> La comilla <span class="sql-quote-broken">'</span> rompe el string literal de PostgreSQL. Si la consulta se envía sin balancear, generará un error de sintaxis en PostgreSQL (Canal de error / Error-based SQLi).`
+              : `⚠️ <strong class="text-warning">Delimiter quote detected:</strong> The single quote <span class="sql-quote-broken">'</span> breaks PostgreSQL string literal. If unbalanced, PostgreSQL will raise a syntax error (Error-based SQLi side channel).`;
+          } else if (rawVal.trim().length > 0) {
+            expElem.innerHTML = isSpanish
+              ? `ℹ️ <span class="text-secondary">Interpolación en ejecución:</span> El texto se concatena directamente en la consulta. Aunque no inyecta operadores sin comillas, la ausencia de bind variables expone el endpoint.`
+              : `ℹ️ <span class="text-secondary">Active interpolation:</span> Text is concatenated directly into SQL. While harmless without quotes, lack of bind variables leaves the endpoint completely exposed.`;
+          } else {
+            expElem.innerHTML = isSpanish
+              ? `<span class="text-secondary">Escribe un ID predial o usa las "Cargas Rápidas" de arriba para ver cómo se concatena el payload dentro del comando WHERE.</span>`
+              : `<span class="text-secondary">Type a parcel ID or click "Quick Presets" above to observe real-time payload interpolation inside the WHERE clause.</span>`;
+          }
+        }
+
+      } else {
+        // Modo Mitigado (3 Barreras / Bind Parameter)
+        if (badgeElem) {
+          badgeElem.className = 'badge bg-success font-mono';
+          badgeElem.textContent = isSpanish ? 'DEFENSA ACTIVA (Bind ORM)' : 'ACTIVE DEFENSE (Bind ORM)';
+        }
+        if (hintElem) {
+          hintElem.textContent = isSpanish
+            ? 'El motor utiliza parámetros compilados de libpq: el payload se procesa como texto plano'
+            : 'Engine uses libpq compiled binary parameters: payload is treated strictly as plain text';
+        }
+
+        const safeParam = escapeHtml(rawVal ? `%${rawVal}%` : '%<criterio>%');
+
+        boxElem.innerHTML = 
+`<span class="sql-kw">SELECT</span> tg_lote.id_lote, tg_lote.cod_sector, tg_lote.tipo_suelo, <span class="sql-kw">COALESCE</span>(catastro_titulares.nombre_completo, <span class="sql-str">'Sin Titular'</span>) <span class="sql-kw">AS</span> titular, <span class="sql-kw">ST_AsGeoJSON</span>(...)
+<span class="sql-kw">FROM</span> tg_lote <span class="sql-kw">LEFT OUTER JOIN</span> catastro_titulares <span class="sql-kw">ON</span> tg_lote.id_lote = catastro_titulares.id_lote
+<span class="sql-kw">WHERE</span> tg_lote.id_lote <span class="sql-kw">ILIKE</span> <span class="sql-injected-safe">:clean_param</span> <span class="sql-kw">OR</span> catastro_titulares.nombre_completo <span class="sql-kw">ILIKE</span> <span class="sql-injected-safe">:clean_param</span>
+<span class="sql-kw">LIMIT</span> 50;
+
+<span class="text-info">-- Enlace en el protocolo binario de PostgreSQL (Libpq Bind):</span>
+<span class="text-warning">:clean_param</span> = <span class="sql-str">"${safeParam}"</span>`;
+
+        if (expElem) {
+          expElem.innerHTML = isSpanish
+            ? `🛡️ <strong class="text-success">Inyección Imposible:</strong> SQLAlchemy compila la consulta con marcadores de posición <code>:clean_param</code>. Caracteres como <code>'</code>, <code>OR</code> o <code>--</code> viajan desacoplados del intérprete SQL y se comparan estrictamente como datos literales.`
+            : `🛡️ <strong class="text-success">Injection Neutralized:</strong> SQLAlchemy compiles the statement with <code>:clean_param</code> placeholders. Tokens like <code>'</code>, <code>OR</code>, or <code>--</code> travel decoupled from the SQL parser and are strictly treated as literal data.`;
+        }
+      }
+    }
+
+    // ==========================================
     // BUSCADOR CATASTRAL SUPERIOR
     // ==========================================
     function setSearchPayload(val) {
       document.getElementById('inputCriterio').value = val;
+      updateLiveConcatPreview();
       ejecutarBusquedaLotes();
     }
 
     function limpiarBusqueda() {
       document.getElementById('inputCriterio').value = '';
+      updateLiveConcatPreview();
       document.getElementById('divResultadosBusqueda').className = 'd-none';
       resetPipelineUI();
       loadStats();
@@ -1884,6 +2110,9 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadStats();
+      if (typeof updateLiveConcatPreview === 'function') {
+        updateLiveConcatPreview();
+      }
     });
   </script>
 </body>
