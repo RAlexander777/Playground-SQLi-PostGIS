@@ -112,7 +112,7 @@ cd ..
 # Install benchmarking dependencies
 pip install requests matplotlib numpy
 
-# Run the complete experimental suite (Concurrency curves, Spatial DoS, Pipeline diagram, WAF Matrix)
+# Run the experimental suite (Concurrency curves, Spatial DoS, Pipeline diagram)
 python run_doctoral_experiments.py
 ```
 
@@ -120,7 +120,6 @@ Generated publication figures are saved directly to `figures/`:
 * `fig1_defense_pipeline.png`: Architecture diagram of the 3-barrier defense pipeline.
 * `fig2_concurrency_latency.png`: Throughput and latency percentiles ($p_{50}$ and $p_{99}$) across 1–100 concurrent clients.
 * `fig3_spatial_dos_complexity.png`: Quadratic execution curve of the geometric Cartesian product.
-* `fig4_attack_mitigation_matrix.png`: Comparative mitigation rates between unprotected architecture, traditional signature WAF (OWASP CRS), and the proposed ORM pipeline.
 
 ---
 
@@ -131,8 +130,7 @@ Generated publication figures are saved directly to `figures/`:
 ├── figures/                          # Publication figures (High-DPI PNGs)
 │   ├── fig1_defense_pipeline.png
 │   ├── fig2_concurrency_latency.png
-│   ├── fig3_spatial_dos_complexity.png
-│   └── fig4_attack_mitigation_matrix.png
+│   └── fig3_spatial_dos_complexity.png
 ├── lab/                              # Dockerized playground & microservices
 │   ├── data/                         # OpenStreetMap raw Puno GeoJSON/JSON
 │   ├── scripts/                      # Standalone exploit and ingestion scripts
@@ -168,10 +166,16 @@ Generated publication figures are saved directly to `figures/`:
 
 If you use this playground, dataset, or architectural defense in your research, please cite:
 
+**This paper may be cited as:**
+
+> Becerra-Lucano, R. A., & Ibarra-Cabrera, M. J. (2026). Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems. *International Multidisciplinary Journal of Emerging Technologies and Applications*, 1(1), 1-8. https://imjeta.org/index.php/IMJETA/libraryFiles/downloadPublic/1
+
+### BibTeX
+
 ```bibtex
-@article{rodrigo2026evaluacion,
-  title={Evaluaci{\'o}n de Vulnerabilidades de Inyecci{\'o}n SQL Espacial en Sistemas de Informaci{\'o}n Catastral basados en PostGIS},
-  author={Rodrigo, A.},
+@article{becerra2026evaluation,
+  title={Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems},
+  author={Becerra-Lucano, Rodrigo Alexander and Ibarra-Cabrera, Manuel Jesus},
   journal={International Multidisciplinary Journal of Emerging Technologies and Applications (IMJETA)},
   volume={1},
   number={1},

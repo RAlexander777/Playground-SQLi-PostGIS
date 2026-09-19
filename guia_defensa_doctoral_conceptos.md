@@ -17,13 +17,13 @@ La mayoría de los desarrolladores y auditores de seguridad asumen que las funci
   3. Envolventes mínimas de contorno (**Bounding Boxes / MBR**).
   4. Relaciones de proximidad topológica del cálculo 9-Intersection (Egenhofer, 1994).
 
-### ¿Por qué los WAFs tradicionales (ModSecurity / OWASP CRS) son ciegos?
-Los Web Application Firewalls (WAF) convencionales operan mediante análisis léxico basado en expresiones regulares y firmas de cadenas maliciosas (buscan palabras como `UNION`, `SELECT`, `DROP`, `--`, o comillas desbalanceadas). 
-* En una **inyección espacial**, el payload puede consistir únicamente en palabras clave matemáticas legítimas de GIS, coordenadas numéricas y paréntesis válidos (ejemplo: `50) OR ST_Contains(...)`). 
-* El WAF interpreta la petición como una instrucción geográfica estándar y la deja pasar (0% a 20% de tasa de detección empírica en Figure 4). La vulnerabilidad nace porque el motor SQL reescribe su Árbol de Sintaxis Abstracta (**AST**) alterando las restricciones de demarcación territorial.
+### ¿Por qué los filtros perimetrales basados en firmas no resuelven la inyección espacial?
+Los filtros perimetrales tradicionales operan mediante análisis léxico basado en expresiones regulares y firmas de cadenas maliciosas (buscan palabras como `UNION`, `SELECT`, `DROP`, `--`, o comillas desbalanceadas). 
+* En una **inyección espacial**, el payload puede consistir únicamente en funciones matemáticas legítimas de GIS, coordenadas numéricas y paréntesis válidos (ejemplo: `50) OR ST_Contains(...)`). 
+* Un filtro léxico interpreta la petición como una instrucción sintáctica válida y la deja pasar. La vulnerabilidad nace porque el motor SQL reescribe su Árbol de Sintaxis Abstracta (**AST**) alterando las restricciones de demarcación territorial en la base de datos.
 
 > **Frase clave para tu sustentación:**  
-> *"La inyección espacial no es un fallo del motor PostGIS, sino un quiebre en la capa de interfaz de la aplicación que concatena parámetros no saneados dentro de operadores topológicos multidimensionales, pasando inadvertida ante los WAFs de firmas tradicionales."*
+> *"La inyección espacial no es un fallo del motor PostGIS, sino un quiebre en la capa de software que concatena parámetros no saneados dentro de operadores topológicos multidimensionales. Su mitigación exige validación y tipado semántico previo en la aplicación, no análisis superficial de firmas."*
 
 ---
 
@@ -126,7 +126,7 @@ En los gobiernos electrónicos actuales, el sistema catastral está interconecta
 
 | Concepto | Lo que debes responder en 1 frase |
 | :--- | :--- |
-| **Spatial SQLi** | Manipulación sintáctica de operadores geométricos multidimensionales que escapa a los filtros WAF escalares tradicionales. |
+| **Spatial SQLi** | Manipulación sintáctica de operadores geométricos multidimensionales que subvierte la lógica espacial del negocio. |
 | **Spatial DoS** | Explotación de la complejidad algorítmica cuadrática $O(N^2)$ en el motor GEOS mediante geometrías hiperdensas y productos cartesianos. |
 | **Tres Barreras** | Pydantic acota límites y tipos, Shapely valida topología en memoria descartando errores, y GeoAlchemy2 compila bind variables EWKB. |
 | **ISO 19152 (LADM)** | Estándar de administración del territorio cuya vulneración corrompe la fe pública de certificados digitales, autovalúos y registros de propiedad. |

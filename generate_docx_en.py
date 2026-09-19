@@ -76,7 +76,7 @@ def create_imjeta_doc_en():
         "Object-Relational Mapping (ORM) tools such as SQLAlchemy and GeoAlchemy2. Results demonstrate that the proposed "
         "pipeline neutralized 100% of the attack vectors with a mean latency overhead of 2.63 ms (+15.24%) and a "
         "12.59% improvement in tail stability (p99). We conclude that effective spatial injection mitigation relies on enforcing "
-        "in-memory topological validation and rigid ORM parameterization at the application layer rather than perimeter firewalls, "
+        "in-memory topological validation and rigid ORM parameterization at the application layer, "
         "securing cadastral integrity with minimal operational overhead."
     )
     r_abs_body = p_abs.add_run(abstract_text)
@@ -381,18 +381,14 @@ def create_imjeta_doc_en():
         "(-12.59%), an optimization directly attributed to efficient reuse of compiled execution plans (prepared statements) in PostgreSQL by "
         "eliminating continuous re-parsing of dynamic queries. This marginal average latency increase is negligible compared to the substantial "
         "security gains achieved, reliably neutralizing bulk cadastral data exfiltration, error-based side-channels, and spatial denial of "
-        "service. It is concluded that traditional WAFs are ineffective against spatial payloads, necessitating spatially aware syntactic "
+        "service. It is concluded that mitigating spatial payloads requires spatially aware syntactic and topological "
         "validation mechanisms embedded directly within application code."
     )
     add_p(
-        "Figure 4 summarizes the attack mitigation and blocking rate (%) across the six evaluated vectors, contrasting an unprotected "
-        "architecture, a traditional signature-based WAF (OWASP ModSecurity Core Rule Set), and the proposed pipeline. Whereas the generic "
-        "WAF fails to identify spatial attacks (achieving only 0% to 20% blocking on topological vectors such as ST_DWithin and ST_Intersects "
-        "due to the lack of geospatial grammar awareness), the three-barrier pipeline achieves a complete 100% blocking rate across all "
-        "evaluated vectors of the CIA triad.",
+        "In contrast to the unprotected vulnerable architecture (where 100% of the attacks succeed), the three-barrier pipeline achieves "
+        "a complete 100% blocking rate across all evaluated vectors of the CIA triad.",
         indent=True
     )
-    add_figure("figures/fig4_attack_mitigation_matrix.png", "Figure 4. Attack mitigation and blocking rate (%) across unprotected architecture, traditional WAF (OWASP CRS), and the proposed pipeline", width_inches=5.8)
     add_run_in(
         "Platform independence and benchmarking validity.",
         "While absolute latency metrics were acquired on a modern multi-core workstation, the methodological validity and generalizability "
@@ -508,8 +504,14 @@ def create_imjeta_doc_en():
             set_font(run_c, size=9, bold=(r_idx == 0))
 
     out_path = "Articulo_Cientifico_IMJETA_FINAL_EN.docx"
-    doc.save(out_path)
-    print(f"Final English document generated successfully at: {out_path}")
+    auto_path = "Articulo_Cientifico_IMJETA_FINAL_EN_Generado_Auto.docx"
+    doc.save(auto_path)
+    print(f"English document generated safely at: {auto_path}")
+    try:
+        doc.save(out_path)
+        print(f"Final English document generated successfully at: {out_path}")
+    except PermissionError:
+        print(f"[AVISO] {out_path} está abierto en Word; se generó copia en {auto_path}")
 
 if __name__ == "__main__":
     create_imjeta_doc_en()

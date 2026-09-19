@@ -284,52 +284,7 @@ def generate_defense_pipeline_diagram():
     plt.close()
     print(f"  [OK] Saved Figure 1 to: {fig_path}")
 
-def generate_waf_vs_defense_matrix():
-    print("[4/4] Generating Figure 4: WAF vs. Defense-in-Depth Attack Coverage Matrix...")
-    vectors = [
-        "V1. Spatial Logic Bypass\n(ST_DWithin Tautology)",
-        "V2. Error Side-Channel\n(ST_Intersects Oracle)",
-        "V3. Algorithmic DoS\n(Buffer Complexity)",
-        "V4. Cadastral Tampering\n(SET Assessment Fraud)",
-        "V5. Cartography Deletion\n(WHERE 1=1 Purge)",
-        "V6. Auth Bypass\n(Login SQLi Comment)"
-    ]
 
-    # Block rates (%)
-    unprotected = [0, 0, 0, 0, 0, 0]
-    traditional_waf = [15, 20, 0, 60, 80, 95]  # Generic WAFs miss spatial functions/semantics
-    proposed_defense = [100, 100, 100, 100, 100, 100]
-
-    x = np.arange(len(vectors))
-    width = 0.28
-
-    fig, ax = plt.subplots(figsize=(12, 5), dpi=300)
-    rects1 = ax.bar(x - width, unprotected, width, label='Unprotected Architecture', color='#E74C3C', alpha=0.9)
-    rects2 = ax.bar(x, traditional_waf, width, label='Traditional Signature WAF (OWASP CRS)', color='#F39C12', alpha=0.9)
-    rects3 = ax.bar(x + width, proposed_defense, width, label='Proposed 3-Barrier Defense Pipeline', color='#27AE60', alpha=0.9)
-
-    ax.set_title('Security Effectiveness Comparison across the Six Spatial SQLi Vectors', fontsize=11, fontweight='bold', pad=12)
-    ax.set_ylabel('Attack Mitigation / Blocking Rate (%)', fontsize=10)
-    ax.set_xticks(x)
-    ax.set_xticklabels(vectors, fontsize=8.5)
-    ax.set_ylim(0, 115)
-    ax.grid(axis='y')
-    ax.legend(loc='upper left', frameon=True, facecolor='white', edgecolor='#CCCCCC', fontsize=9)
-
-    for rects in [rects2, rects3]:
-        for rect in rects:
-            h = rect.get_height()
-            if h > 0:
-                ax.annotate(f'{h}%',
-                    xy=(rect.get_x() + rect.get_width() / 2, h),
-                    xytext=(0, 3), textcoords="offset points",
-                    ha='center', va='bottom', fontsize=8, fontweight='bold')
-
-    plt.tight_layout()
-    fig_path = os.path.join(OUTPUT_DIR, "fig4_attack_mitigation_matrix.png")
-    plt.savefig(fig_path)
-    plt.close()
-    print(f"  [OK] Saved Figure 4 to: {fig_path}")
 
 if __name__ == "__main__":
     print("="*70)
@@ -338,7 +293,6 @@ if __name__ == "__main__":
     run_concurrency_benchmarks()
     run_spatial_dos_benchmarks()
     generate_defense_pipeline_diagram()
-    generate_waf_vs_defense_matrix()
     print("="*70)
-    print("ALL EXPERIMENTS COMPLETED AND 4 PUBLICATION FIGURES GENERATED!")
+    print("ALL EXPERIMENTS COMPLETED AND 3 PUBLICATION FIGURES GENERATED!")
     print("="*70)

@@ -80,7 +80,7 @@ def create_imjeta_doc():
         "ejecutadas a través de herramientas de Mapeo Objeto-Relacional (ORM) como SQLAlchemy y GeoAlchemy2. Los resultados "
         "demuestran que el pipeline propuesto neutralizó el 100% de los vectores de ataque con un sobrecosto medio de latencia "
         "de 2.63 ms (+15.24%) y una mejora del 12.59% en la estabilidad de cola (p99). Se concluye que la mitigación efectiva "
-        "de inyecciones espaciales no depende de cortafuegos perimetrales genéricos (WAF), sino de trasladar la validación topológica y la parametrización "
+        "de inyecciones espaciales requiere trasladar la validación topológica y la parametrización "
         "tipada a la capa de aplicación (ORM), garantizando la integridad catastral con un impacto operativo marginal."
     )
     r_abs_body = p_abs.add_run(abstract_text)
@@ -234,9 +234,8 @@ def create_imjeta_doc():
     add_p(
         "Se adoptó un diseño experimental y cuantitativo orientado a evaluar la susceptibilidad de endpoints geoespaciales "
         "ante inyecciones SQL y medir el impacto en rendimiento derivado de un esquema de mitigación multicapa. La evaluación "
-        "contrasta tres escenarios defensivos: (1) servicio vulnerable sin protección, (2) servicio protegido perimetralmente "
-        "mediante un cortafuegos de aplicaciones web (WAF) basado en firmas (OWASP CRS v3.3), y (3) servicio mitigado mediante el "
-        "pipeline de aplicación propuesto (ORM con validación tipada y topológica previa)."
+        "contrasta dos escenarios defensivos: (1) servicio vulnerable sin protección (consultas dinámicas concatenadas), y "
+        "(2) servicio mitigado mediante el pipeline de aplicación propuesto (ORM con validación tipada y topológica previa)."
     )
 
     add_heading_2("3.2. Conjunto de Datos Catastrales (Dataset)")
@@ -253,8 +252,7 @@ def create_imjeta_doc():
     add_heading_2("3.3. Entorno Experimental y Arquitectura")
     add_p(
         "El banco de pruebas se implementó en contenedores Docker mediante microservicios aislados: (1) un servicio de base de datos con "
-        "PostgreSQL 15 y PostGIS 3.3, (2) una API en Python 3.11 con FastAPI y Uvicorn, y (3) un proxy reverso Nginx configurado con el "
-        "módulo ModSecurity v3 y el conjunto de reglas perimetrales OWASP Core Rule Set (CRS v3.3). Las pruebas de estrés se ejecutaron en "
+        "PostgreSQL 15 y PostGIS 3.3, y (2) una API en Python 3.11 con FastAPI y Uvicorn. Las pruebas de estrés se ejecutaron en "
         "un entorno controlado con un procesador Intel Core Ultra 5 245KF de 14 núcleos a 5.2 GHz con 32 GB de RAM DDR5 y almacenamiento "
         "NVMe PCIe 4.0 sobre Linux kernel 6.6 (WSL2). El código fuente, dataset y playground interactivo se encuentran disponibles "
         "públicamente en: https://github.com/RAlexander777/Playground-SQLi-PostGIS."
@@ -266,8 +264,8 @@ def create_imjeta_doc():
         "orientados a las tres dimensiones de la tríada CIA (Confidencialidad, Integridad y Disponibilidad). "
         "La batería experimental comprendió dos categorías de vectores: (a) vectores de inyección espacial directa (V1 a V3), dirigidos contra predicados "
         "topológicos nativos y funciones de análisis geométrico en PostGIS; y (b) vectores de inyección SQL convencional aplicados al flujo transaccional y "
-        "administrativo del catastro (V4 a V6), utilizados como línea base de control para verificar la integridad del modelo de datos y la capacidad de "
-        "detección de herramientas perimetrales. La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
+        "administrativo del catastro (V4 a V6), utilizados como línea base de control para verificar la integridad del modelo de datos y el flujo de control "
+        "transaccional. La evaluación de rendimiento contempló una batería de carga de 300 peticiones y curvas de concurrencia escalonada "
         "(1 a 100 clientes) sobre el endpoint de proximidad territorial (/predios/radio), registrando métricas de latencia (media, p50, p95, p99) y throughput (req/s). "
         "La caracterización técnica de los seis vectores de explotación, sus endpoints y los payloads representativos se detallan en el Apéndice 1."
     )
@@ -408,20 +406,14 @@ def create_imjeta_doc():
         "ejecución preparados (prepared statements) en PostgreSQL al evitar el re-parseo continuo de consultas dinámicas, mientras que bajo estrés "
         "masivo concurrente el sobrecosto de serialización en la capa de aplicación modula la respuesta sin comprometer la estabilidad ni registrar "
         "fallos (0.0%). Este incremento marginal en el promedio es insignificante frente a la ganancia de seguridad, neutralizando la exfiltración "
-        "masiva de datos catastrales, el canal lateral de error y la denegación de servicio espacial. Se concluye que los WAFs tradicionales "
-        "son ineficaces ante payloads espaciales, demandando esquemas de validación sintáctica con conciencia espacial integrados en el código de la aplicación."
+        "masiva de datos catastrales, el canal lateral de error y la denegación de servicio espacial. Se concluye que la mitigación de "
+        "payloads espaciales demanda esquemas de validación sintáctica y topológica integrados en el código de la aplicación."
     )
     add_p(
-        "La Figura 4 sintetiza la tasa de mitigación y bloqueo de ataques (%) a través de los seis vectores evaluados, contrastando una "
-        "arquitectura desprotegida, un WAF tradicional basado en firmas (OWASP ModSecurity Core Rule Set) y el pipeline propuesto. "
-        "Mientras que el WAF genérico no logra identificar los ataques espaciales (0% a 20% de bloqueo en vectores topológicos como "
-        "ST_DWithin y ST_Intersects al carecer de gramática geoespacial), el bloqueo residual del 15% al 20% registrado por el WAF en V1 y V2 "
-        "se debió exclusivamente a la detección de tokens SQL convencionales (como operadores booleanos OR o comillas desparejadas) en ciertas "
-        "variantes del payload, y no a una inspección semántica de las funciones topológicas subyacentes, como lo demuestra su inoperancia absoluta "
-        "(0%) frente al vector DoS en V3. En contraste, el pipeline de tres barreras logra un bloqueo completo del 100% en todos los vectores evaluados de la tríada CIA.",
+        "En contraste con la arquitectura vulnerable desprotegida (donde el 100% de los ataques prospera), el pipeline de tres barreras "
+        "implementado en la capa de aplicación alcanzó una tasa de mitigación del 100% en todos los vectores evaluados de la tríada CIA.",
         indent=True
     )
-    add_figure("figures/fig4_attack_mitigation_matrix.png", "Figura 4. Tasa de mitigación y bloqueo de ataques (%) entre arquitectura desprotegida, WAF tradicional (OWASP CRS) y pipeline propuesto", width_inches=5.8)
     add_run_in(
         "Independencia de plataforma y validez del benchmarking.",
         "Si bien las métricas absolutas de latencia se obtuvieron sobre una estación de trabajo con procesador Intel Core Ultra 5 245KF, "
