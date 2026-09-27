@@ -172,20 +172,17 @@ If you use this playground, dataset, or architectural defense in your research, 
 
 **This paper may be cited as:**
 
-> Becerra-Lucano, R. A., & Ibarra-Cabrera, M. J. (2026). Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems. *International Multidisciplinary Journal of Emerging Technologies and Applications*, 1(1), 1-8. https://imjeta.org/index.php/IMJETA/libraryFiles/downloadPublic/1
+> Becerra-Lucano, R. A., & Ibarra-Cabrera, M. J. (2026). Experimental Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems. *Preprint / Under Review*.
 
 ### BibTeX
 
 ```bibtex
-@article{becerra2026evaluation,
-  title={Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems},
+@article{becerra2026spatial_sqli,
+  title={Experimental Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems},
   author={Becerra-Lucano, Rodrigo Alexander and Ibarra-Cabrera, Manuel Jesus},
-  journal={International Multidisciplinary Journal of Emerging Technologies and Applications (IMJETA)},
-  volume={1},
-  number={1},
-  pages={1--8},
-  year={2026},
-  url={https://imjeta.org/index.php/IMJETA/libraryFiles/downloadPublic/1}
+  journal={Journal of Cybersecurity and Privacy},
+  note={Under review},
+  year={2026}
 }
 ```
 

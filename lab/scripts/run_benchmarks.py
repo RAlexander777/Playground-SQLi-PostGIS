@@ -73,7 +73,7 @@ def main():
     diff_p95 = res_mit["p95_ms"] - res_vuln["p95_ms"]
 
     print("\n" + "="*80)
-    print("TABLA COMPARATIVA DE RENDIMIENTO (LISTA PARA INCLUIR EN EL PAPER - IMJETA)")
+    print("TABLA COMPARATIVA DE RENDIMIENTO (LISTA PARA INCLUIR EN EL PAPER)")
     print("="*80)
     print("| Métrica de Rendimiento | API Vulnerable (SQL Dinámico) | API Mitigada (GeoAlchemy2) | Variación (Overhead) |")
     print("| :--- | :--- | :--- | :--- |")
