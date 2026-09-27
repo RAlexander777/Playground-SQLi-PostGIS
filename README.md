@@ -7,7 +7,7 @@
 [![ISO 19152 LADM](https://img.shields.io/badge/Standard-ISO%2019152%20LADM-orange.svg)](https://www.iso.org/standard/51206.html)
 
 Interactive laboratory and experimental testbed accompanying the scientific research paper:
-> **"Evaluación de Vulnerabilidades de Inyección SQL Espacial en Sistemas de Información Catastral basados en PostGIS"** / **"Spatial SQL Injection Vulnerability Assessment in PostGIS-Based Cadastral Information Systems"**
+> **"Experimental Evaluation of Spatial SQL Injection Vulnerabilities in PostGIS-Based Cadastral Information Systems"**
 
 This repository provides an interactive web playground, reproducible benchmark scripts, and an end-to-end containerized environment (PostgreSQL 15 + PostGIS 3.3 + FastAPI + Leaflet) to simulate, evaluate, and mitigate spatial SQL injection vulnerabilities across the CIA triad (Confidentiality, Integrity, and Availability).
 
