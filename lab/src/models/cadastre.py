@@ -5,7 +5,7 @@ from src.config.database import Base
 class TgLote(Base):
     """
     Componente Gráfico y Alfanumérico del Lote Catastral (ISO 19152 - LA_SpatialUnit).
-    SRID 32719 (WGS 84 / UTM Zona 19 Sur).
+    SRID 32718 (WGS 84 / UTM Zona 18 Sur - Lima Metropolitana).
     """
     __tablename__ = 'tg_lote'
 
@@ -20,7 +20,7 @@ class TgLote(Base):
     
     # Atributo geométrico principal
     objcad_lote_gemo = Column(
-        Geometry(geometry_type='POLYGON', srid=32719, spatial_index=True), 
+        Geometry(geometry_type='POLYGON', srid=32718, spatial_index=True), 
         nullable=True
     )
 

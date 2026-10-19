@@ -25,8 +25,6 @@ services:
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8020:8000"
-    volumes:
-      - .:/app
     environment:
       - DATABASE_URL=postgresql://postgres:postgis_secure_pass_2026@db:5432/catastro_sqli_db
     depends_on:

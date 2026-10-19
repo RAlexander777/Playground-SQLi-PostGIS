@@ -69,3 +69,11 @@ def health_check():
             "admin": "/api/v1/admin"
         }
     }
+
+@app.get("/favicon.ico")
+def favicon():
+    return {}
+
+@app.get("/.well-known/appspecific/com.chrome.devtools.json")
+def chrome_devtools_json():
+    return {}

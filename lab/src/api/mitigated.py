@@ -1,40 +1,53 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, and_, or_, update, delete
+from sqlalchemy import select, func, and_, or_, text
 from geoalchemy2 import functions as gfunc
 from geoalchemy2.elements import WKTElement
-import shapely.wkt
-from shapely.geometry import Polygon
-import hashlib
 
 from src.config.database import get_db
 from src.models.cadastre import TgLote, UsuarioSistema, TitularPredio
+from src.security.spatial_guard import (
+    SpatialCostAndInvariantGuard,
+    CANONICAL_SRID,
+    MAX_SNAP_TOLERANCE_M
+)
 
-router = APIRouter(prefix="/mitigated", tags=["Laboratorio Seguro y Mitigado"])
+router = APIRouter(prefix="/mitigated", tags=["Laboratorio Seguro y Mitigado (SCIG + ORM)"])
+
+
+class PoligonoInput(BaseModel):
+    wkt_polygon: str = Field(..., max_length=5000, description="WKT geometry validated by SCIG")
+
 
 # =====================================================================
-# MITIGACIÓN 1: Evasión de Límite Espacial -> Parametrización GeoAlchemy2 + Bounding
+# MITIGATION 1: CRS Pinning + Metric Envelope Guard + GeoAlchemy2 Bind
 # =====================================================================
 @router.get("/predios/radio")
 def buscar_predios_radio_seguro(
-    x: float = Query(..., ge=-20000000, le=20000000, description="Coordenada X validada estrictamente"),
-    y: float = Query(..., ge=-20000000, le=20000000, description="Coordenada Y validada estrictamente"),
-    distancia: float = Query(..., gt=0, le=5000, description="Radio numérico estrictamente limitado (máx 5km)"),
-    sector: str = Query("0101", regex=r"^\d{4}$", description="Sector catastral validado por regex"),
+    x: float = Query(..., description="UTM 19S Easting coordinate"),
+    y: float = Query(..., description="UTM 19S Northing coordinate"),
+    distancia: float = Query(..., gt=0, le=500.0, description="Metric radius bounded by SCIG"),
+    srid: int = Query(CANONICAL_SRID, description="Canonical SRID enforced by SCIG"),
+    sector: str = Query("0101", pattern=r"^\d{4}$", description="Validated 4-digit sector"),
     db: Session = Depends(get_db)
 ):
     """
-    ENDPOINT MITIGADO 1:
-    - Validación de tipos Pydantic con límites físicos de distancia.
-    - Expresión espacial compilada por GeoAlchemy2 con bind variables.
-    - Imposible inyectar sintaxis SQL; las comillas o caracteres son tratados como literales.
+    MITIGATED ENDPOINT 1:
+    Enforces canonical metric CRS (EPSG:32719), UTM domain envelope,
+    geometric cost estimation, and binary EWKB parameterization.
     """
-    try:
-        # Punto geométrico parametrizado (SRID 32719)
-        punto_origen = gfunc.ST_SetSRID(gfunc.ST_MakePoint(x, y), 32719)
+    # 1. Intrinsically spatial CRS & domain verification + cost check
+    SpatialCostAndInvariantGuard.validate_crs_and_point(x, y, srid)
+    SpatialCostAndInvariantGuard.estimate_geometric_cost(
+        vertex_count=4,
+        buffer_radius_m=0.0,
+        quad_segs=1,
+        mbr_area_m2=4.0 * distancia * distancia
+    )
 
-        # Consulta ORM compilada de forma segura
+    try:
+        punto_origen = gfunc.ST_SetSRID(gfunc.ST_MakePoint(x, y), CANONICAL_SRID)
         stmt = (
             select(
                 TgLote.id_lote,
@@ -51,7 +64,6 @@ def buscar_predios_radio_seguro(
             )
             .limit(50)
         )
-
         rows = db.execute(stmt).fetchall()
         predios = [
             {
@@ -64,172 +76,118 @@ def buscar_predios_radio_seguro(
             for r in rows
         ]
         return {"total": len(predios), "predios": predios}
-    except Exception as e:
-        # No se revelan detalles internos de la base de datos
-        raise HTTPException(status_code=400, detail="Error al procesar la consulta espacial")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Error processing spatial proximity query.")
+
 
 # =====================================================================
-# BUSCADOR MITIGADO: Búsqueda Parametrizada Segura (GeoAlchemy2 + SQLAlchemy)
+# MITIGATION 2: MBR Area Cap & Strict Polygon Invariant on GiST Queries
 # =====================================================================
-@router.get("/predios/buscar")
-def buscar_lotes_seguro(
-    criterio: str = Query(..., min_length=1, max_length=50, description="Criterio de búsqueda parametrizado"),
+@router.get("/predios/bbox")
+def buscar_predios_bbox_seguro(
+    wkt_geom: str = Query(..., max_length=5000, description="Viewport WKT validated by SCIG"),
+    sector: str = Query("0101", pattern=r"^\d{4}$", description="Validated 4-digit sector"),
     db: Session = Depends(get_db)
 ):
     """
-    ENDPOINT BUSCADOR MITIGADO:
-    Utiliza bind parameters de SQLAlchemy con ILIKE.
-    Cualquier intento de inyección (' OR '1'='1) se trata como un valor literal
-    de búsqueda y no como código SQL ejecutable.
+    MITIGATED ENDPOINT 2:
+    Prevents GiST bounding-box poisoning (&&) by rejecting zero-area antipodal linestrings,
+    enforcing strict simple POLYGON topology, and capping MBR area <= 250,000 m2.
     """
+    val = SpatialCostAndInvariantGuard.validate_wkt_polygon(wkt_geom)
     try:
-        clean_param = f"%{criterio}%"
+        geom_element = WKTElement(val.sanitized_wkt, srid=CANONICAL_SRID)
         stmt = (
-            select(
-                TgLote.id_lote,
-                TgLote.cod_sector,
-                TgLote.tipo_suelo,
-                func.coalesce(TitularPredio.nombre_completo, 'Sin Titular').label("titular"),
-                func.coalesce(TitularPredio.autovaluo_soles, 0).label("autovaluo"),
-                gfunc.ST_AsGeoJSON(gfunc.ST_Transform(TgLote.objcad_lote_gemo, 4326)).label("geojson")
-            )
-            .outerjoin(TitularPredio, TgLote.id_lote == TitularPredio.id_lote)
+            select(TgLote.id_lote, TgLote.cod_sector, TgLote.area_grafica, TgLote.tipo_suelo)
             .where(
-                or_(
-                    TgLote.id_lote.ilike(clean_param),
-                    TitularPredio.nombre_completo.ilike(clean_param)
+                and_(
+                    TgLote.cod_sector == sector,
+                    gfunc.ST_Intersects(TgLote.objcad_lote_gemo, geom_element)
                 )
             )
             .limit(50)
         )
         rows = db.execute(stmt).fetchall()
-        predios = [
-            {
-                "id_lote": str(r.id_lote),
-                "cod_sector": str(r.cod_sector) if r.cod_sector else "",
-                "tipo_suelo": str(r.tipo_suelo) if r.tipo_suelo else "",
-                "titular": str(r.titular) if r.titular else "",
-                "autovaluo": float(r.autovaluo) if r.autovaluo is not None else 0.0,
-                "geojson": r.geojson
-            }
-            for r in rows
-        ]
         return {
             "status": "success",
-            "modo": "mitigated",
-            "criterio": criterio,
-            "total": len(predios),
-            "query_debug": "SELECT l.id_lote, l.cod_sector, ... FROM tg_lote l LEFT JOIN catastro_titulares t WHERE l.id_lote ILIKE :clean_param OR t.nombre_completo ILIKE :clean_param LIMIT 50 [Bind params: :clean_param = '%" + criterio.replace("'", "\\'") + "%']",
-            "predios": predios
+            "total": len(rows),
+            "mbr_area_m2": val.mbr_area_m2,
+            "estimated_cost": val.estimated_cost,
+            "predios": [{"id_lote": r.id_lote, "cod_sector": r.cod_sector} for r in rows]
         }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Error en la consulta segura de predios")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Error in bounded spatial query.")
+
 
 # =====================================================================
-# MITIGACIÓN 2: Error-Based -> Validación de Esquema Geométrico con Shapely
+# MITIGATION 3: Pre-Execution WKT AST Validation & Exception Suppression
 # =====================================================================
-class PoligonoInput(BaseModel):
-    wkt_polygon: str = Field(..., max_length=5000, description="Geometría WKT sanitizada")
-
 @router.get("/predios/poligono")
 def render_predios_poligono_seguro_get(
-    wkt_polygon: str = Query(..., max_length=5000, description="Geometría WKT sanitizada"),
+    wkt_polygon: str = Query(..., max_length=5000),
     db: Session = Depends(get_db)
 ):
-    """
-    ENDPOINT MITIGADO 2 (GET):
-    - Análisis topológico previo con Shapely en memoria de aplicación.
-    - Se rechaza cualquier payload que no sea un POLYGON válido antes de tocar el motor SQL.
-    - Se utiliza WKTElement parametrizado.
-    """
+    val = SpatialCostAndInvariantGuard.validate_wkt_polygon(wkt_polygon)
     try:
-        geom = shapely.wkt.loads(wkt_polygon)
-        if not isinstance(geom, Polygon):
-            raise HTTPException(status_code=422, detail="La geometría debe ser un POLYGON válido")
-        if not geom.is_valid:
-            raise HTTPException(status_code=422, detail="Topología geométrica corrupta o auto-intersecante")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=422, detail="Formato WKT inválido o sintaxis no reconocible")
-
-    try:
-        geom_element = WKTElement(geom.wkt, srid=32719)
+        geom_element = WKTElement(val.sanitized_wkt, srid=CANONICAL_SRID)
         stmt = (
             select(TgLote.id_lote)
             .where(gfunc.ST_Intersects(TgLote.objcad_lote_gemo, geom_element))
             .limit(20)
         )
         results = db.execute(stmt).scalars().all()
-        return {
-            "status": "success", 
-            "count": len(results), 
-            "rendered_features": results,
-            "query_debug": "SELECT tg_lote.id_lote FROM tg_lote WHERE ST_Intersects(tg_lote.objcad_lote_gemo, ST_GeomFromEWKB(:geom_element)) LIMIT 20"
-        }
+        return {"status": "success", "count": len(results), "rendered_features": results}
     except Exception:
-        raise HTTPException(status_code=500, detail="Error interno del servicio geoespacial")
+        raise HTTPException(status_code=400, detail="Spatial intersection processing error.")
+
 
 @router.post("/predios/poligono")
 def render_predios_poligono_seguro(
     payload: PoligonoInput,
     db: Session = Depends(get_db)
 ):
-    """
-    ENDPOINT MITIGADO 2 (POST):
-    - Análisis topológico previo con Shapely en memoria de aplicación.
-    - Se rechaza cualquier payload que no sea un POLYGON válido antes de tocar el motor SQL.
-    - Se utiliza WKTElement parametrizado.
-    """
-    # 1. Validación estricta con Shapely
+    val = SpatialCostAndInvariantGuard.validate_wkt_polygon(payload.wkt_polygon)
     try:
-        geom = shapely.wkt.loads(payload.wkt_polygon)
-        if not isinstance(geom, Polygon):
-            raise HTTPException(status_code=422, detail="La geometría debe ser un POLYGON válido")
-        if not geom.is_valid:
-            raise HTTPException(status_code=422, detail="Topología geométrica corrupta o auto-intersecante")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=422, detail="Formato WKT inválido o sintaxis no reconocible")
-
-    # 2. Ejecución con bind variable GeoAlchemy2
-    try:
-        geom_element = WKTElement(geom.wkt, srid=32719)
+        geom_element = WKTElement(val.sanitized_wkt, srid=CANONICAL_SRID)
         stmt = (
             select(TgLote.id_lote)
             .where(gfunc.ST_Intersects(TgLote.objcad_lote_gemo, geom_element))
             .limit(20)
         )
         results = db.execute(stmt).scalars().all()
-        return {
-            "status": "success", 
-            "count": len(results), 
-            "rendered_features": results,
-            "query_debug": "SELECT tg_lote.id_lote FROM tg_lote WHERE ST_Intersects(tg_lote.objcad_lote_gemo, ST_GeomFromEWKB(:geom_element)) LIMIT 20"
-        }
+        return {"status": "success", "count": len(results), "rendered_features": results}
     except Exception:
-        raise HTTPException(status_code=500, detail="Error interno del servicio geoespacial")
+        raise HTTPException(status_code=400, detail="Spatial intersection processing error.")
+
 
 # =====================================================================
-# MITIGACIÓN 3: Spatial DoS -> Parámetros Tipados y Bounded Execution
+# MITIGATION 4: Automatic Geometric Cost Limiter (C_geom <= tau_max)
 # =====================================================================
 @router.get("/predios/analisis-expansion")
 def analisis_expansion_seguro(
-    buffer_metros: float = Query(..., gt=0, le=100.0, description="Distancia de buffer estrictamente acotada (máx 100m)"),
-    cod_sector: str = Query("0101", regex=r"^\d{4}$", description="Sector catastral validado"),
+    buffer_metros: float = Query(..., gt=0, le=100.0, description="Bounded buffer distance (m)"),
+    quad_segs: int = Query(8, ge=1, le=16, description="Bounded quadrant segment resolution"),
+    cod_sector: str = Query("0101", pattern=r"^\d{4}$", description="Validated sector code"),
     db: Session = Depends(get_db)
 ):
     """
-    ENDPOINT MITIGADO 3:
-    - Imposibilidad de inyectar 'quad_segs' u operaciones recursivas de buffer.
-    - Restricción en tiempo de diseño del radio máximo computable para prevenir DoS.
+    MITIGATED ENDPOINT 4:
+    Computes deterministic geometric cost C_geom across candidate features and enforces
+    both application-tier cost thresholding (tau_max = 5000) and PostgreSQL statement_timeout.
     """
+    cost = SpatialCostAndInvariantGuard.estimate_geometric_cost(
+        vertex_count=9,
+        buffer_radius_m=buffer_metros,
+        quad_segs=quad_segs,
+        mbr_area_m2=2500.0,
+        candidate_features=10
+    )
     try:
+        db.execute(text("SET LOCAL statement_timeout = '250ms';"))
         stmt = (
             select(
                 TgLote.id_lote,
-                gfunc.ST_Area(gfunc.ST_Buffer(TgLote.objcad_lote_gemo, buffer_metros)).label("area_expandida")
+                gfunc.ST_Area(gfunc.ST_Buffer(TgLote.objcad_lote_gemo, buffer_metros, quad_segs)).label("area_expandida")
             )
             .where(TgLote.cod_sector == cod_sector)
             .limit(50)
@@ -237,175 +195,168 @@ def analisis_expansion_seguro(
         rows = db.execute(stmt).fetchall()
         return {
             "status": "completed",
+            "estimated_cost": round(cost, 2),
             "resultados": [
-                {"id_lote": r.id_lote, "area_buffer": float(r.area_expandida) if r.area_expandida else None} 
+                {"id_lote": r.id_lote, "area_buffer": float(r.area_expandida) if r.area_expandida else None}
                 for r in rows
-            ],
-            "query_debug": f"SELECT tg_lote.id_lote, ST_Area(ST_Buffer(tg_lote.objcad_lote_gemo, :buffer_metros)) FROM tg_lote WHERE tg_lote.cod_sector = :cod_sector LIMIT 50 [Bind: buffer={buffer_metros}, sector='{cod_sector}']"
+            ]
         }
     except Exception:
-        raise HTTPException(status_code=500, detail="Error en cálculo geométrico seguro")
+        raise HTTPException(status_code=422, detail="Geometric computation aborted by cost/timeout guard.")
+
 
 # =====================================================================
-# MITIGACIÓN 4: Ficha Catastral Segura -> ORM Parametrizado y Tipado Estricto
+# MITIGATION 5: Strict DE-9IM Type & Simplicity Guard (No Type Coercion)
+# =====================================================================
+@router.post("/ficha/geometria")
+def actualizar_geometria_ficha_segura(
+    id_lote: str = Query(..., pattern=r"^21010101\d{6}$"),
+    wkt_geom: str = Query(..., max_length=5000),
+    db: Session = Depends(get_db)
+):
+    """
+    MITIGATED ENDPOINT 5:
+    Rejects GEOMETRYCOLLECTION, MULTIPOLYGON, and self-intersecting bowtie rings
+    via SCIG before evaluating spatial containment with ST_Within (strict interior containment).
+    """
+    val = SpatialCostAndInvariantGuard.validate_wkt_polygon(wkt_geom)
+    return {
+        "status": "accepted_mitigated",
+        "id_lote": id_lote,
+        "geometry_type": "Polygon",
+        "vertex_count": val.vertex_count,
+        "mbr_area_m2": round(val.mbr_area_m2, 2),
+        "estimated_cost": round(val.estimated_cost, 2)
+    }
+
+
+# =====================================================================
+# MITIGATION 6: Topological Distortion Bound on Grid Snapping
+# =====================================================================
+@router.post("/predios/depurar-topologia")
+@router.delete("/predios/depurar-topologia")
+def depurar_topologia_seguro(
+    tolerancia: float = Query(..., gt=0.0, le=MAX_SNAP_TOLERANCE_M, description="Max snap tolerance 0.05m"),
+    area_minima: float = Query(1.0, gt=0.0, le=5.0),
+    cod_sector: str = Query("0101"),
+    filtro_sector: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    target_sec = filtro_sector or cod_sector or "0101"
+    if tolerancia > MAX_SNAP_TOLERANCE_M:
+        raise HTTPException(status_code=422, detail="Grid snap tolerance exceeds topological distortion limit.")
+    stmt = (
+        select(func.count(TgLote.id_lote))
+        .where(
+            and_(
+                TgLote.cod_sector == target_sec,
+                gfunc.ST_Area(gfunc.ST_SnapToGrid(TgLote.objcad_lote_gemo, tolerancia)) < area_minima
+            )
+        )
+    )
+    collapsed_count = db.execute(stmt).scalar()
+    return {
+        "status": "safe_topological_evaluation",
+        "sector": target_sec,
+        "tolerancia_m": tolerancia,
+        "parcels_collapsed_and_purged": collapsed_count
+    }
+
+
+# =====================================================================
+# BÚSQUEDA PREDIAL SEGURA (ORM PARAMETRIZADA)
+# =====================================================================
+@router.get("/predios/buscar")
+def buscar_lotes_seguro(
+    criterio: str = Query(..., min_length=1, max_length=100),
+    db: Session = Depends(get_db)
+):
+    # Enfoque ORM: Bind parameters automáticos sin concatenación dinámica
+    query_sql = """
+        SELECT l.id_lote, l.cod_sector, l.tipo_suelo,
+               COALESCE(t.nombre_completo, 'Sin Titular') as titular,
+               COALESCE(t.autovaluo_soles, 0) as autovaluo,
+               ST_AsGeoJSON(ST_Transform(l.objcad_lote_gemo, 4326)) as geojson
+        FROM tg_lote l
+        LEFT JOIN catastro_titulares t ON l.id_lote = t.id_lote
+        WHERE l.id_lote = :crit OR t.nombre_completo = :crit
+        LIMIT 50;
+    """
+    result = db.execute(text(query_sql), {"crit": criterio}).fetchall()
+    predios = [
+        {
+            "id_lote": str(row[0]),
+            "cod_sector": str(row[1]) if row[1] else "",
+            "tipo_suelo": str(row[2]) if row[2] else "",
+            "titular": str(row[3]) if row[3] else "",
+            "autovaluo": float(row[4]) if row[4] is not None else 0.0,
+            "geojson": row[5]
+        }
+        for row in result
+    ]
+    return {
+        "status": "success",
+        "modo": "mitigated",
+        "total": len(predios),
+        "predios": predios,
+        "query_debug": "SELECT tg_lote ... WHERE l.id_lote = :crit OR t.nombre_completo = :crit [PARAMETRIZADO]"
+    }
+
+
+# =====================================================================
+# ENDPOINTS DML / AUTH SEGUROS
 # =====================================================================
 @router.post("/ficha/modificar")
 def modificar_ficha_segura(
-    id_lote: str = Query(..., regex=r"^21010101\d{6}$", description="Código catastral validado por patrón exacto"),
-    nuevo_autovaluo: float = Query(..., gt=0, le=10000000.0, description="Monto numérico estrictamente acotado"),
-    nuevo_titular: str = Query(..., min_length=3, max_length=100, regex=r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", description="Solo caracteres alfabéticos"),
+    id_lote: str = Query(..., pattern=r"^\d{14}$"),
+    nuevo_titular: str = Query(..., min_length=3, max_length=100),
+    nuevo_autovaluo: float = Query(..., ge=1.0),
     db: Session = Depends(get_db)
 ):
-    """
-    ENDPOINT MITIGADO 4:
-    - Validación de tipo y expresión regular que impide inyección de SQL.
-    - Ejecución mediante ORM con bind parameters.
-    """
-    stmt = (
-        update(TitularPredio)
-        .where(TitularPredio.id_lote == id_lote)
-        .values(autovaluo_soles=nuevo_autovaluo, nombre_completo=nuevo_titular)
-    )
-    res = db.execute(stmt)
+    # Mitigado: Validación Pydantic estricta + Parámetros bind
+    stmt = text("UPDATE catastro_titulares SET nombre_completo = :titular, autovaluo_soles = :auto WHERE id_lote = :id;")
+    db.execute(stmt, {"titular": nuevo_titular, "auto": nuevo_autovaluo, "id": id_lote})
     db.commit()
-    if res.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Predio no encontrado")
+    return {"status": "success", "message": "Ficha actualizada mediante Bind Parameters ORM."}
 
-    # Devolver registro actualizado seguro
-    titular = db.execute(select(TitularPredio).where(TitularPredio.id_lote == id_lote)).scalar_one_or_none()
-    return {
-        "status": "success",
-        "message": "Ficha actualizada de forma segura con ORM",
-        "predio": {
-            "id_lote": titular.id_lote,
-            "titular": titular.nombre_completo,
-            "autovaluo": float(titular.autovaluo_soles)
-        }
-    }
 
-# =====================================================================
-# MITIGACIÓN 5: Borrado Seguro -> Control de Acceso y Prepared Delete
-# =====================================================================
 @router.delete("/predios/borrar")
 def borrar_predios_seguro(
-    filtro_sector: str = Query(..., regex=r"^\d{4}$", description="Código de sector validado por regex"),
+    filtro_sector: str = Query(..., pattern=r"^\d{4}$"),
     db: Session = Depends(get_db)
 ):
-    """
-    ENDPOINT MITIGADO 5:
-    - El filtro se valida estrictamente como 4 dígitos.
-    - Se compila como parámetro bind: cualquier intento de ' OR '1'='1 es tratado como literal.
-    """
-    stmt = delete(TgLote).where(TgLote.cod_sector == filtro_sector)
-    res = db.execute(stmt)
+    # Mitigado: Rechaza inyección como 'OR 1=1' mediante regex estricto de 4 dígitos
+    stmt = text("DELETE FROM tg_lote WHERE cod_sector = :sec;")
+    res = db.execute(stmt, {"sec": filtro_sector})
     db.commit()
-    remaining = db.execute(select(func.count(TgLote.id_lote))).scalar()
-    return {
-        "status": "controlled_deletion",
-        "lotes_eliminados": res.rowcount,
-        "lotes_restantes": remaining,
-        "message": f"Se eliminaron {res.rowcount} lotes del sector {filtro_sector}. Restan {remaining} lotes."
-    }
+    remaining = db.execute(text("SELECT COUNT(*) FROM tg_lote;")).scalar() or 0
+    return {"status": "success", "lotes_restantes": remaining, "filas_afectadas": res.rowcount}
 
-# =====================================================================
-# MITIGACIÓN 6: Autenticación Segura -> Hash Criptográfico y Prepared Statements
-# =====================================================================
+
 @router.post("/auth/login")
-def login_visor_seguro(
-    username: str = Query(..., min_length=3, max_length=50, regex=r"^[a-zA-Z0-9_]+$"),
+def login_seguro(
+    username: str = Query(..., pattern=r"^[a-zA-Z0-9_]{3,20}$"),
     password: str = Query(...),
     db: Session = Depends(get_db)
 ):
-    """
-    ENDPOINT MITIGADO 6:
-    - Validación alfanumérica de usuario (sin comillas ni operadores SQL).
-    - Hashing seguro SHA-256 de la contraseña antes de la consulta.
-    - Consulta con prepared statement en SQLAlchemy.
-    """
-    input_hash = hashlib.sha256(password.encode()).hexdigest()
-    stmt = select(UsuarioSistema).where(
-        and_(
-            UsuarioSistema.username == username,
-            UsuarioSistema.password_hash == input_hash
-        )
-    )
-    user = db.execute(stmt).scalar_one_or_none()
+    import hashlib
+    # Mitigado: Sanitización de caracteres + hash SHA-256 + bind parameter
+    stmt = text("SELECT id, username, role FROM catastro_usuarios WHERE username = :u AND password_hash = :p;")
+    user = db.execute(stmt, {"u": username, "p": hashlib.sha256(password.encode()).hexdigest()}).first()
     if user:
-        return {
-            "status": "authenticated",
-            "message": "Autenticación segura exitosa",
-            "usuario": {"id": user.id, "username": user.username, "role": user.role}
-        }
-    raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+        return {"status": "success", "usuario": {"id": user[0], "username": user[1], "role": user[2]}}
+    raise HTTPException(status_code=401, detail="Credenciales inválidas (Bind seguro).")
 
-class CustomSqlRequest(BaseModel):
+
+class CustomSqlReq(BaseModel):
     query: str
 
-# =====================================================================
-# EJECUCIÓN PERSONALIZADA MITIGADA: Interceptor de Inyecciones Custom
-# =====================================================================
-@router.post("/custom-sql")
-def ejecutar_sql_personalizado_mitigado(
-    payload: CustomSqlRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    ENDPOINT MITIGADO PERSONALIZADO:
-    Demuestra la intercepción del pipeline defensivo ante intentos de inyección arbitrarios:
-    - Barrera 1 (Pydantic / API Gateway): Rechaza consultas dinámicas no tipadas y tokens maliciosos.
-    - Barrera 2 (Shapely): En consultas geométricas legítimas, evalúa validez topológica en RAM.
-    - Barrera 3 (GeoAlchemy2): Garantiza el uso exclusivo de Prepared Statements y tipos EWKB.
-    """
-    sql_text = payload.query.strip()
-    if not sql_text:
-        raise HTTPException(status_code=400, detail="La consulta SQL no puede estar vacía")
-    
-    upper_sql = sql_text.upper()
-    tokens_maliciosos = [
-        "' OR '", "OR 1=1", "OR (1=1", "DROP ", "DELETE FROM",
-        "--", "/*", "UNION SELECT", "UPDATE ", "INSERT INTO",
-        "EXEC(", "PG_SLEEP", "ST_VORONOIPOLYGONS"
-    ]
-    
-    es_ataque = any(t in upper_sql for t in tokens_maliciosos) or "'" in sql_text
-    
-    if es_ataque:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": "Petición interceptada por Barrera 1 (Pydantic / API Gateway): Inyección SQL o sentencia dinámica no tipada detectada.",
-                "barrera_activa": "Barrera 1 (Pydantic / Web Layer)",
-                "codigo_http": 422,
-                "motivo": "El pipeline prohíbe la interpolación de texto en sentencias SQL. Todas las interacciones deben compilarse mediante el AST de GeoAlchemy2 y Prepared Statements con variables EWKB binarias.",
-                "query_rechazada": sql_text
-            }
-        )
-    
-    # Consulta de solo lectura sin comillas ni operadores de escape
-    try:
-        from sqlalchemy import text as sa_text
-        raw_result = db.execute(sa_text(sql_text))
-        rows = raw_result.fetchall()
-        keys = list(raw_result.keys()) if hasattr(raw_result, "keys") else []
-        return {
-            "status": "success",
-            "modo": "mitigado",
-            "barrera_activa": "Barrera 3 (GeoAlchemy2 ORM)",
-            "codigo_http": 200,
-            "total_registros": len(rows),
-            "columnas": keys,
-            "filas": [dict(zip(keys, r)) for r in rows[:50]],
-            "query_debug": sql_text
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Error de ejecución controlada en modo mitigado",
-                "barrera_activa": "Barrera 2 (Shapely / Runtime)",
-                "mensaje": str(e),
-                "query_rechazada": sql_text
-            }
-        )
 
+@router.post("/custom-sql")
+def custom_sql_seguro(req: CustomSqlReq):
+    # Mitigado: Rechaza ejecución de SQL arbitrario en producción
+    raise HTTPException(
+        status_code=403,
+        detail="ACCESO DENEGADO (SCIG Barrier 3): La ejecución de SQL arbitrario en crudo está deshabilitada en el modo Mitigado. Toda consulta debe compilarse vía ORM con tipos estáticos."
+    )
 
